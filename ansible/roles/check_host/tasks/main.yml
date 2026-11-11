@@ -34,6 +34,10 @@
       `newgrp docker` for the current shell). Also make sure the daemon is
       running: `sudo systemctl start containerd docker`.
 
+- name: Check the NVIDIA container runtime
+  ansible.builtin.include_tasks: nvidia-runtime.yml
+  when: dg_nvidia_enabled | bool
+
 - name: Verify box root is writable
   ansible.builtin.file:
     path: "{{ dg_box_root }}"

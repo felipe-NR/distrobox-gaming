@@ -1,0 +1,28 @@
+---
+# The restricted box is created by scripts/migrate-gaming-box.sh with
+# `docker create --gpus all`, which needs the NVIDIA Container Toolkit
+# registered as a Docker runtime. Without it `docker create` fails and the
+# migration rolls back to the old box. Installing the toolkit is a host-sudo
+# action, so fail early with the commands instead.
+- name: Probe Docker runtimes for the NVIDIA Container Toolkit
+  ansible.builtin.command:
+    argv:
+      - docker
+      - info
+      - --format
+      - "{{ '{{json .Runtimes}}' }}"
+  register: _dg_docker_runtimes
+  changed_when: false
+  failed_when: false
+
+- name: Assert Docker has the nvidia runtime
+  ansible.builtin.assert:
+    that: "'\"nvidia\"' in _dg_docker_runtimes.stdout"
+    fail_msg: >-
+      dg_nvidia_enabled is true but Docker has no `nvidia` runtime
+      (runtimes: {{ _dg_docker_runtimes.stdout | default('') | trim or 'docker info failed' }}),
+      so the box cannot get the GPU through `--gpus all`. Install the NVIDIA
+      Container Toolkit on the host and restart Docker:
+      `sudo pacman -S --needed nvidia-container-toolkit &&
+      sudo nvidia-ctk runtime configure --runtime=docker &&
+      sudo systemctl restart docker`.

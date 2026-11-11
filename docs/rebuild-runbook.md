@@ -142,6 +142,13 @@ bind mount are untouched.
   upgrade restarts the runtime (which also restarts the box, wiping its
   tmpfs `/run` — see `docs/box-steam-dbus.md`) and may leave the daemon
   stopped (`sudo systemctl start containerd docker`).
+- **NVIDIA Container Toolkit (NVIDIA hosts).** With `dg_nvidia_enabled`
+  the restricted box is created with `docker create --gpus all`, which
+  needs the toolkit registered as a Docker runtime:
+  `sudo pacman -S --needed nvidia-container-toolkit`, then
+  `sudo nvidia-ctk runtime configure --runtime=docker` and
+  `sudo systemctl restart docker`. `check_host` and
+  `migrate-gaming-box.yml` assert the `nvidia` runtime is present.
 - **Run in the foreground.** Do not launch a full rebuild detached or
   backgrounded (`nohup … &`, a tmux pane you detach from, etc.). Slow
   steps — Wine installers, large archive extraction — have been killed

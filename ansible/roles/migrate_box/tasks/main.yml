@@ -10,6 +10,12 @@
   register: _dg_box_privileged
   changed_when: false
 
+- name: Check the NVIDIA container runtime
+  ansible.builtin.include_role:
+    name: check_host
+    tasks_from: nvidia-runtime
+  when: dg_nvidia_enabled | bool
+
 - name: Migrate gaming container to restricted runtime
   ansible.builtin.command:
     argv: >-
