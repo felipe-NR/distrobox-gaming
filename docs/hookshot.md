@@ -79,8 +79,15 @@ on it. Check the `vk: device` lines in `hookshot_log.txt` for the card in use.
 
 Native SDL3 input: the 8BitDo (and any Xbox, DualSense or Switch Pro pad) works
 without mapping, with rumble and gyro where the pad has them. Bindings live in
-`hookshot_options.ini` (`pad_<button>`), which is backed up with the saves.
-Check `hookshot_log.txt` in the game folder for the controller line.
+`hookshot_options.ini` (`key_<button>`), which is backed up with the saves.
+
+The launcher sets `SDL_JOYSTICK_DISABLE_UDEV=1`. The box runs in its own network
+namespace, so udev's hotplug events never reach it, and SDL with udev only sees
+pads that were connected when the game started: a pad plugged in later, or one
+that reconnects through the receiver, stays dead until a restart. Without udev
+SDL watches `/dev/input` with inotify and picks the pad up again. To check which
+input node the game holds, run on the host:
+`ls -l /proc/$(pgrep -x hookshot)/fd | grep /dev/input`.
 
 ## Saves
 

@@ -18,6 +18,10 @@ fi
 unset LD_LIBRARY_PATH
 export HOOKSHOT_NO_UPDATE_CHECK=1
 export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+# The box has its own network namespace, so udev's hotplug broadcasts never
+# reach it: SDL would only see pads present at launch. Without udev SDL
+# watches /dev/input with inotify, which follows the host's bind-mounted nodes.
+export SDL_JOYSTICK_DISABLE_UDEV=1
 {% if dg_gpu_env | trim %}
 # Discrete-GPU pin (NVIDIA box).
 export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-{{ dg_nvidia_icd }}}"
