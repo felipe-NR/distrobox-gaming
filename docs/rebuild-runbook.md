@@ -165,6 +165,12 @@ bind mount are untouched.
   ```
 
   Only pass the tags for games/features you have assets staged for.
+
+  After changing `dg_nvidia_enabled`, run the installed opt-in roles
+  again as well. A plain `site.yml` re-renders the core launchers and
+  ES-DE, but these opt-in roles write `dg_gpu_env` or the NVIDIA ICD pin
+  into their own launchers and keep the old GPU setting until rerun:
+  `install_hookshot`, `install_lichii` and `install_unleashed_recomp`.
 - **Restore save data (only if the box `$HOME` was lost).** A container
   prune leaves the bind-mounted home — and therefore all saves —
   untouched. But if you re-provisioned onto a *fresh* box home, pull the
