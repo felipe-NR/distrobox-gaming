@@ -24,6 +24,11 @@ dg_save_backup_nas_mount: /mnt/gigachad
 
 dg_backup_root: "{{ dg_save_backup_nas_root }}/dg-save"
 
+# Refuse to write backups unless dg_save_backup_nas_mount is a mountpoint, so
+# an unmounted NAS never silently fills the local disk. A host without a NAS
+# that backs up to a plain local directory sets this false.
+dg_save_backup_require_mount: true
+
 # Restore is opt-in: set true (e.g. on a from-scratch remount) to have the
 # backup_saves role pull saves back from the NAS after deploying the tooling.
 # It uses --ignore-existing, so it never clobbers a save already on the box.

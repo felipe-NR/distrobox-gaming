@@ -48,6 +48,10 @@
 # dg_opensc2k_original_archive_sha256: <SHA-256 of the RAR>
 # dg_opensc2k_original_exe_sha256: <SHA-256 of the extracted SIMCITY.EXE>
 #
+# Host without a NAS: back up saves to a plain local directory.
+# dg_save_backup_nas_mount: /home/me/gaming-backups
+# dg_save_backup_require_mount: false
+#
 # Steam library root on the host. This is the ONE host-sudo target in the
 # whole playbook set: create_box chows it to the box UID/GID before the
 # container exists, so `site.yml` needs working host sudo (--ask-become-pass

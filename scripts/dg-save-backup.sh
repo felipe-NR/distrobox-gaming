@@ -15,7 +15,7 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${HOME
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/distrobox-gaming"
 . "$CONF_DIR/backup.env"
 
-if ! mountpoint -q "$DG_BACKUP_MOUNT"; then
+if [ "${DG_BACKUP_REQUIRE_MOUNT:-1}" = 1 ] && ! mountpoint -q "$DG_BACKUP_MOUNT"; then
   echo "dg-save-backup: $DG_BACKUP_MOUNT is not mounted; skipping this run."
   exit 0
 fi
