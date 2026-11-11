@@ -3,7 +3,7 @@
 # file overlay) lives in downgrade.yml and apply_mod.yml; this file
 # decides whether each needs to run and bails early if the host is in
 # a state that would corrupt the install. All preflight + version
-# detection tasks are tagged 'always' so they still execute when the
+# detection tasks carry the downgrade/apply/tools tags so they still run when the
 # user filters with --tags downgrade or --tags apply — the dispatcher
 # below depends on facts they set.
 
@@ -11,7 +11,7 @@
   ansible.builtin.stat:
     path: "{{ dg_gt5_mod_archive }}"
   register: _gt5_archive
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Fail when mod archive is missing
   ansible.builtin.fail:
@@ -22,7 +22,7 @@
       and drop it at that path (or override dg_gt5_mod_archive in
       host_vars/localhost.yml).
   when: not _gt5_archive.stat.exists
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Verify base disc directory exists
   # The disc image must remain mounted/extracted on the NAS for RPCS3 to
@@ -30,7 +30,7 @@
   ansible.builtin.stat:
     path: "{{ dg_rom_heavy_root }}/ps3/Gran Turismo 5 (USA) (EnJaFrEsPt) (v02.00).ps3"
   register: _gt5_disc
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Warn when disc directory is missing
   ansible.builtin.debug:
@@ -39,7 +39,7 @@
       RPCS3 will still play with just the update tree present, but the
       game won't appear in the games list without the disc registration.
   when: not _gt5_disc.stat.exists
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Refuse to run while RPCS3 is open
   # PKG installs and PDIPFS overwrites both touch files RPCS3 holds open
@@ -52,13 +52,13 @@
   register: _rpcs3_running
   changed_when: false
   check_mode: false
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Fail when RPCS3 is running
   ansible.builtin.fail:
     msg: "RPCS3 is currently running (PID(s): {{ _rpcs3_running.stdout_lines | default([]) }}). Close it before re-running this playbook."
   when: _rpcs3_running.stdout | default('') | length > 0
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Read installed update version from PARAM.SFO
   # PARAM.SFO is a binary blob; APP_VER is stored as an ASCII "NN.NN"
@@ -73,13 +73,13 @@
   register: _gt5_current_ver
   changed_when: false
   check_mode: false
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Compute downgrade-needed flag
   ansible.builtin.set_fact:
     _gt5_current_version: "{{ _gt5_current_ver.stdout | default('') | trim }}"
     _gt5_needs_downgrade: "{{ (_gt5_current_ver.stdout | default('') | trim) != dg_gt5_target_version }}"
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Report current state
   ansible.builtin.debug:
@@ -88,7 +88,7 @@
       Currently installed:       {{ _gt5_current_version | default('(none — base disc only)') }}
       Target for the Master Mod: {{ dg_gt5_target_version }}
       Downgrade pass needed:     {{ _gt5_needs_downgrade }}
-  tags: always
+  tags: [downgrade, apply, tools]
 
 - name: Run version-rollback (1.05 -> 2.11 PKG chain)
   ansible.builtin.include_tasks: downgrade.yml
@@ -106,13 +106,13 @@
   ansible.builtin.stat:
     path: "{{ dg_gt5_save_editor_src }}/bin/gt5tool"
   register: _gt5_save_editor
-  tags: [always]
+  tags: [downgrade, apply, tools]
 
 - name: Warn when GT5 save editor archive is missing
   ansible.builtin.debug:
     msg: "WARNING: {{ dg_gt5_save_editor_src }} missing on NAS — skipping GT5 save editor install (see docs/gt5-master-mod.md)"
   when: not (_gt5_save_editor.stat.exists | default(false))
-  tags: [always]
+  tags: [downgrade, apply, tools]
 
 - name: Install GT5 save editor into the box
   ansible.builtin.copy:
