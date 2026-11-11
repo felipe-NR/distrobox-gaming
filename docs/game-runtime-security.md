@@ -48,7 +48,10 @@ check in `ansible-playbook reset-configs.yml --tags gpu` after a driver update.
 
 Direct input nodes are mounted for gamepads. The migration adds the box user
 to the host input and hidraw numeric groups, and passes connected 8BitDo
-hidraw devices. If the controller receives a different hidraw node after a
+hidraw devices. The box user must be able to read those nodes: on a host
+that creates them `root:root 0600`, install
+`config/host-udev-rules/70-8bitdo-hidraw.rules` (gives them to `input`)
+before migrating, or the migration stops while the pad is plugged in. If the controller receives a different hidraw node after a
 reconnect, the container has to be rebuilt while idle so Docker passes the new
 node — `migrate_gaming_box.sh` refuses to touch an already-restricted box, so
 use its recreate mode:
