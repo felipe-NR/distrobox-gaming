@@ -28,4 +28,16 @@ export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-{{ dg_nvidia_icd }}}"
 {% endif %}
 
 cd "$GAME"
+# Only the Windows build writes hookshot_log.txt; on Linux the game logs to
+# stderr, which is lost when it starts from the menu. Keep the same file and
+# rotation (.1 = last run ... .4) unless stderr is a terminal.
+if [ ! -t 2 ]; then
+  for k in 4 3 2; do
+    if [ -f "hookshot_log.$((k - 1)).txt" ]; then
+      mv -f "hookshot_log.$((k - 1)).txt" "hookshot_log.$k.txt"
+    fi
+  done
+  if [ -f hookshot_log.txt ]; then mv -f hookshot_log.txt hookshot_log.1.txt; fi
+  exec >hookshot_log.txt 2>&1
+fi
 exec ./bin/hookshot "$@"

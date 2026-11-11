@@ -99,3 +99,8 @@ see upstream `docs/saves.md`.
 
 `~/Games/Hookshot/hookshot_log.txt` (last run, `.1` to `.4` before it). A
 `vk: status:` line every 600 frames shows VRAM use against the driver's budget.
+
+Only the Windows build writes that file itself. On Linux the game logs to
+stderr, which is lost when it starts from the menu, so the launcher redirects
+stderr to `hookshot_log.txt` and rotates the older runs the same way. Started
+from a terminal, the game prints there instead.
