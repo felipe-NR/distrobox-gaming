@@ -46,6 +46,11 @@ dg_pacman_packages:
   - retroarch
   - python-cryptography
   - steam
+  # migrate_box's runtime check requires `wine` in every box, and most opt-in
+  # Windows-game roles run under it. Listing it only in the Xenia set left a
+  # from-scratch box failing the migration.
+  - wine
+  - winetricks
 
 dg_aur_packages:
   - duckstation-qt-bin
