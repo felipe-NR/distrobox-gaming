@@ -80,10 +80,11 @@ fi
 
 # The home, ROMs and Steam library are bind mounts and are not copied into
 # this image. The image holds the already-installed Arch packages only.
+# Always commit afresh: the tag is keyed by container ID, which does not change
+# when packages are added, so a snapshot left by an earlier failed attempt
+# would miss them (e.g. wine installed after the first try).
 snapshot="dg-gaming-snapshot:${source_id:0:12}"
-if ! docker image inspect "$snapshot" >/dev/null 2>&1; then
-  docker commit "$name" "$snapshot" >/dev/null
-fi
+docker commit "$name" "$snapshot" >/dev/null
 
 args=(
   --name "$candidate"
