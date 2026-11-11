@@ -66,6 +66,7 @@
     - name: Look for the dump (.nup, or romfs + exefs)
       ansible.builtin.stat:
         path: "{{ item }}"
+        get_checksum: false  # the .nup is ~25 GB; a SHA1 of it takes minutes
       loop:
         - "{{ dg_hookshot_nup }}"
         - "{{ dg_hookshot_dump_dir }}/romfs"
@@ -74,13 +75,16 @@
 
     - name: Choose the builder's game arguments
       ansible.builtin.set_fact:
-        _hookshot_game_args: >-
-          {{ ('--nup ' ~ (dg_hookshot_nup | quote))
+        _hookshot_game_argv: >-
+          {{ ['--nup', dg_hookshot_nup]
              if _hookshot_dump.results[0].stat.exists else
-             ('--romfs ' ~ ((dg_hookshot_dump_dir ~ '/romfs') | quote) ~
-              ' --exefs ' ~ ((dg_hookshot_dump_dir ~ '/exefs') | quote))
+             ['--romfs', dg_hookshot_dump_dir ~ '/romfs', '--exefs', dg_hookshot_dump_dir ~ '/exefs']
              if (_hookshot_dump.results[1].stat.isdir | default(false)) and
-                (_hookshot_dump.results[2].stat.isdir | default(false)) else '' }}
+                (_hookshot_dump.results[2].stat.isdir | default(false)) else [] }}
+
+    - name: Quote the game arguments for shell tasks
+      ansible.builtin.set_fact:
+        _hookshot_game_args: "{{ _hookshot_game_argv | map('quote') | join(' ') }}"
 
     - name: Report the missing dump
       ansible.builtin.debug:
@@ -98,22 +102,26 @@
       changed_when: false
       when: _hookshot_game_args | length > 0
 
+    # The script reaches the dump paths as "$@" rather than spliced into
+    # sh -c: the dump folder has spaces, and quoting it inside the
+    # single-quoted script broke the --nup argument.
     - name: Build the game from the dump (10 to 45 minutes; skipped when this release is built)
-      ansible.builtin.shell: |
-        {{ dg_in_box }} sh -lc '
+      ansible.builtin.command:
+        argv: "{{ (dg_in_box | split) + ['sh', '-c', _hookshot_build_script, 'hookshot-build'] + _hookshot_game_argv }}"
+      vars:
+        _hookshot_build_script: |
           set -eu
           ref="{{ dg_hookshot_game_dir }}/.dg-built-ref"
           if [ -x "{{ dg_hookshot_game_bin }}" ] && grep -qx "{{ dg_hookshot_release_tag }}" "$ref" 2>/dev/null; then
             echo hookshot-build-current
             exit 0
           fi
-          {{ dg_hookshot_apprun | quote }} --cli {{ _hookshot_game_args }} \
+          "{{ dg_hookshot_apprun }}" --cli "$@" \
             --out "{{ dg_hookshot_game_dir }}" \
-            --language {{ dg_hookshot_language | quote }} \
-            --jobs {{ dg_hookshot_build_jobs }}
+            --language "{{ dg_hookshot_language }}" \
+            --jobs "{{ dg_hookshot_build_jobs }}"
           printf "%s\n" "{{ dg_hookshot_release_tag }}" > "$ref"
           echo hookshot-built
-        '
       register: _hookshot_build
       changed_when: "'hookshot-built' in _hookshot_build.stdout"
       when: _hookshot_game_args | length > 0
