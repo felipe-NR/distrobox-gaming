@@ -49,7 +49,7 @@ check in `ansible-playbook reset-configs.yml --tags gpu` after a driver update.
 Direct input nodes are mounted for gamepads: `/dev/input` is bind-mounted as a
 directory with a device-cgroup rule for the input major, so pads plugged in or
 reconnected after the box starts appear inside it. The migration adds the box
-user to the host input and hidraw numeric groups. No hidraw node is passed:
+user to the host input and DRM numeric groups. No hidraw node is passed:
 Docker fixes a `--device` path at create time and refuses to start the box when
 that node is missing, and hidraw numbers change across reboots and reconnects.
 Games reach the pad through evdev (SDL, Steam, Wine's SDL bus).

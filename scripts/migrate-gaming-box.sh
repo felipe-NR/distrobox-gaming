@@ -170,7 +170,7 @@ docker start "$candidate" >/dev/null
 # Bind-mounted input nodes keep host numeric group IDs, which may have
 # different names in Arch. Add the game user to those exact numeric groups.
 device_groups=()
-for device in /dev/input/event0 /dev/hidraw* /dev/dri/card* /dev/dri/renderD*; do
+for device in /dev/input/event0 /dev/dri/card* /dev/dri/renderD*; do
   [[ -e $device ]] || continue
   device_groups+=("$(stat -c %g "$device")")
 done
@@ -180,6 +180,12 @@ for device_gid in $(printf '%s\n' "${device_groups[@]}" | sort -un); do
   fi
   docker exec "$candidate" usermod -aG "$device_gid" "$username"
 done
+# Earlier migrations added the user to the hidraw nodes' group, which is root
+# on hosts that create them root:root. The snapshot keeps that membership, so
+# drop it: no device in the box needs it now.
+if docker exec "$candidate" id -nG "$username" | tr ' ' '\n' | grep -qx root; then
+  docker exec "$candidate" gpasswd -d "$username" root >/dev/null
+fi
 
 check='set -eu
 test ! -e "/home/$3/.ssh"
