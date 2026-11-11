@@ -649,7 +649,7 @@ dg_emulator_commands:
   - pcsx2-qt
   - flycast
   - dolphin-emu
-  - PPSSPPQt
+  - PPSSPPSDL
   # rpcs3 verified via the install_rpcs3 AppImage (not a PATH command anymore)
   - shadps4
   # xemu verified via the install_xemu AppImage + bin/xemu wrapper
