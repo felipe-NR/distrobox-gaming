@@ -46,15 +46,17 @@ device groups. This lets gamescope's Xwayland server use EGL. Verify with
 `glxinfo -B`, `vulkaninfo --summary`, a short gamescope launch, and the 32-bit GLX
 check in `ansible-playbook reset-configs.yml --tags gpu` after a driver update.
 
-Direct input nodes are mounted for gamepads. The migration adds the box user
-to the host input and hidraw numeric groups, and passes connected 8BitDo
-hidraw devices. The box user must be able to read those nodes: on a host
-that creates them `root:root 0600`, install
-`config/host-udev-rules/70-8bitdo-hidraw.rules` (gives them to `input`)
-before migrating, or the migration stops while the pad is plugged in. If the controller receives a different hidraw node after a
-reconnect, the container has to be rebuilt while idle so Docker passes the new
-node — `migrate_gaming_box.sh` refuses to touch an already-restricted box, so
-use its recreate mode:
+Direct input nodes are mounted for gamepads: `/dev/input` is bind-mounted as a
+directory with a device-cgroup rule for the input major, so pads plugged in or
+reconnected after the box starts appear inside it. The migration adds the box
+user to the host input and hidraw numeric groups. No hidraw node is passed:
+Docker fixes a `--device` path at create time and refuses to start the box when
+that node is missing, and hidraw numbers change across reboots and reconnects.
+Games reach the pad through evdev (SDL, Steam, Wine's SDL bus).
+
+A device change still needs the container rebuilt while idle —
+`migrate_gaming_box.sh` refuses to touch an already-restricted box, so use its
+recreate mode:
 
 ```sh
 cd ansible

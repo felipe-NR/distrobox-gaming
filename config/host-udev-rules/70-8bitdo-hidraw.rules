@@ -1,11 +1,10 @@
-# Let the restricted gaming container read 8BitDo hidraw nodes.
+# Let a container read 8BitDo hidraw nodes.
 #
 # Some hosts create the 8BitDo hidraw node as root:root 0600 with no uaccess
-# ACL (an ACL would not cross into the container anyway). migrate-gaming-box.sh
-# passes connected 8BitDo hidraw nodes through and requires the box user to
-# read them, so the migration fails and SDL loses the pad's hidraw path.
-# Give the node to the `input` group, whose numeric GID the migration already
-# adds the box user to.
+# ACL (an ACL would not cross into a container anyway). The gaming box no
+# longer gets hidraw nodes (migrate-gaming-box.sh passes /dev/input only), but
+# the Lichii sandbox passes the reference pad's hidraw node with its group, so
+# give the node to the `input` group.
 #
 # 8BitDo vendor ID 2dc8 (Ultimate 2 and its 2.4 GHz dongle). Install on the
 # HOST, then reload and replug the pad:

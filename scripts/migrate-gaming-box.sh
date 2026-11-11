@@ -141,14 +141,11 @@ fi
 
 # Steam and SDL need input nodes. Docker's default device cgroup blocks new
 # nodes after hotplug, so allow input's major while keeping other devices out.
+# No hidraw node is passed: a --device path is fixed at create time and Docker
+# refuses to start the box when it is missing, and hidraw numbers change across
+# reboots and reconnects. The pad reaches games through evdev in /dev/input.
 args+=(--mount type=bind,src=/dev/input,dst=/dev/input)
 args+=(--device-cgroup-rule 'c 13:* rwm')
-for link in /dev/input/by-id/*8BitDo* /dev/input/by-id/*8bitdo*; do
-  [[ -e $link ]] || continue
-  device=$(readlink -f "$link")
-  [[ $device == /dev/hidraw* ]] || continue
-  args+=(--device "$device:$device:rwm")
-done
 
 migration_stage=precutover
 cleanup_failed_migration() {
@@ -210,12 +207,6 @@ command -v steam >/dev/null
 sudo -n true'
 docker exec --user "$username" --workdir "$box_home" "$candidate" \
   sh -lc "$check" sh "$rom_root" "$box_home" "$username" "$xsocket" "$backup_mount" "$nvidia_enabled"
-for link in /dev/input/by-id/*8BitDo* /dev/input/by-id/*8bitdo*; do
-  [[ -e $link ]] || continue
-  device=$(readlink -f "$link")
-  [[ $device == /dev/hidraw* ]] || continue
-  docker exec --user "$username" "$candidate" test -r "$device"
-done
 if [[ $nvidia_enabled == 1 ]]; then
   docker exec --user "$username" "$candidate" nvidia-smi --query-gpu=name --format=csv,noheader >/dev/null
 fi
