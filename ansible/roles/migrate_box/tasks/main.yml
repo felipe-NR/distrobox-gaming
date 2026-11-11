@@ -48,11 +48,31 @@
         test -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY"
   changed_when: false
 
+# The extract is downloaded by bootstrap_packages (site.yml). A box that had
+# no NVIDIA before this migration has none yet; site.yml repairs it later.
+- name: Check for the extracted 32-bit NVIDIA libraries
+  ansible.builtin.stat:
+    path: "{{ dg_nvidia_lib32_lib_dir }}"
+  register: _dg_nvidia_lib32_extract
+  when: dg_nvidia_lib32_workaround_enabled | bool
+
 - name: Repair 32-bit NVIDIA libraries after container migration
   ansible.builtin.include_role:
     name: bootstrap_packages
     tasks_from: repair-lib32-nvidia
-  when: dg_nvidia_lib32_workaround_enabled | bool
+  when:
+    - dg_nvidia_lib32_workaround_enabled | bool
+    - _dg_nvidia_lib32_extract.stat.isdir | default(false)
+
+- name: Note the deferred 32-bit NVIDIA repair
+  ansible.builtin.debug:
+    msg: >-
+      {{ dg_nvidia_lib32_lib_dir }} does not exist yet; run
+      `ansible-playbook site.yml` to download lib32-nvidia-utils and repair
+      /usr/lib32 in the box.
+  when:
+    - dg_nvidia_lib32_workaround_enabled | bool
+    - not (_dg_nvidia_lib32_extract.stat.isdir | default(false))
 
 - name: Restore NVIDIA EGL platform soname links from package files
   ansible.builtin.shell: |

@@ -148,7 +148,9 @@ bind mount are untouched.
   `sudo pacman -S --needed nvidia-container-toolkit`, then
   `sudo nvidia-ctk runtime configure --runtime=docker` and
   `sudo systemctl restart docker`. `check_host` and
-  `migrate-gaming-box.yml` assert the `nvidia` runtime is present.
+  `migrate-gaming-box.yml` assert the `nvidia` runtime is present. When an
+  AMD-only box is switched to NVIDIA, the migration defers the `/usr/lib32`
+  NVIDIA repair until `site.yml` has downloaded `lib32-nvidia-utils`.
 - **Run in the foreground.** Do not launch a full rebuild detached or
   backgrounded (`nohup … &`, a tmux pane you detach from, etc.). Slow
   steps — Wine installers, large archive extraction — have been killed
