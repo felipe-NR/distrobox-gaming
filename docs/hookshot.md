@@ -39,7 +39,7 @@ untouched).
 
 ## How it works
 
-- Downloads the pinned `Hookshot-v2.0.14-x86_64.AppImage` (sha256 in
+- Downloads the pinned `Hookshot-v2.1.0-x86_64.AppImage` (sha256 in
   `group_vars/all/hookshot.yml`) and extracts it with `--appimage-extract`,
   because the restricted box has no FUSE. `AppRun --cli` runs `nx2/make_game.py`
   with the bundled Python.
