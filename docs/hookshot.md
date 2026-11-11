@@ -59,16 +59,21 @@ Seeded into `hookshot_options.ini` only when a key is missing
 
 | Key | Value | Why |
 |-|-|-|
-| `quality_preset` | `3` (Balanced, 8 GB) | Matches the MS-A1's 8 GiB iGPU carve-out. Use `5` (Ultra) on a 16 GB+ card |
+| `quality_preset` | `3` (Balanced, 8 GB) | Matches an 8 GB GPU: the RTX 4060, or the 780M's 8 GiB carve-out. Use `5` (Ultra) on a 16 GB+ card |
 | `output_res` | `1920x1080` | The panel's native size. Use `3840x2160` on a 4K display |
 | `fullscreen` | `1` | |
 | `controller_in_background` | `1` | Pad keeps working if focus moves |
 
 Anisotropic filtering defaults to 16x and the frame cap to 60 FPS, so the role
 leaves them. The in-game menu opens with **Insert/F1**, or **Home** (or
-Select+Start) on a pad. Upscaler choice (AMD FSR 3.1 on Radeon) is in-game only:
-*Graphics → Upscaler*. The first visit to each area stutters while shaders
-compile; later visits are smooth.
+Select+Start) on a pad. Upscaler choice is in-game only: *Graphics →
+Upscaler*. The first visit to each area stutters while shaders compile; later
+visits are smooth.
+
+With `dg_nvidia_enabled` the launcher sets `VK_ICD_FILENAMES` to the NVIDIA
+Vulkan ICD, so the game sees only the NVIDIA card and `RX_VK_DEVICE` is not
+needed. The box also lists the iGPU, so without the pin Hookshot could start
+on it. Check the `vk: device` lines in `hookshot_log.txt` for the card in use.
 
 ## Gamepad
 

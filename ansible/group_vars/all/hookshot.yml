@@ -41,10 +41,10 @@ dg_hookshot_build_jobs: "{{ ansible_facts.processor_vcpus | default(8) }}"
 dg_hookshot_revert: false
 
 # Seeded only when a key is missing, so in-game menu changes survive reruns.
-# Ceiling for a Radeon 780M with an 8 GiB carve-out on a 1080p60 panel: the
-# Balanced (8 GB) preset, native output, fullscreen, 60 FPS cap. Anisotropic
-# filtering already defaults to 16x. On a 4K box with a big GPU set
-# output_res=3840x2160 and quality_preset=5 (Ultra, 16 GB+).
+# Ceiling for an 8 GB GPU (RTX 4060, or a Radeon 780M with an 8 GiB carve-out)
+# on a 1080p60 panel: the Balanced (8 GB) preset, native output, fullscreen,
+# 60 FPS cap. Anisotropic filtering already defaults to 16x. On a 4K box with a
+# big GPU set output_res=3840x2160 and quality_preset=5 (Ultra, 16 GB+).
 dg_hookshot_options_defaults:
   quality_preset: '3'
   output_res: 1920x1080
