@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+set -eu
+# Hookshot launcher (Ocarina of Time, Switch 2 static recomp). Managed by
+# install_hookshot. Starts the built bin/hookshot the way the builder's Play
+# does (make_game.game_env): from the game folder, without the AppImage's
+# libraries, update check off. The folder's own `hookshot` launcher is not
+# used because it self-updates past the pinned {{ dg_hookshot_release_tag }}.
+# Gamepad: native SDL3 (8BitDo works as an Xbox pad).
+
+GAME="{{ dg_hookshot_game_dir }}"
+if [ ! -x "$GAME/bin/hookshot" ] || [ ! -f "$GAME/image.bin" ]; then
+  printf '%s\n' "ERROR: Hookshot is not built yet ($GAME)." >&2
+  printf '%s\n' "Put your dump at {{ dg_hookshot_nup }}, then run:" >&2
+  printf '%s\n' "  cd {{ dg_project_root }}/ansible && ansible-playbook install-hookshot.yml" >&2
+  exit 1
+fi
+
+unset LD_LIBRARY_PATH
+export HOOKSHOT_NO_UPDATE_CHECK=1
+export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+{% if dg_gpu_env | trim %}
+# Discrete-GPU pin (NVIDIA box).
+export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-{{ dg_nvidia_icd }}}"
+{% endif %}
+
+cd "$GAME"
+exec ./bin/hookshot "$@"

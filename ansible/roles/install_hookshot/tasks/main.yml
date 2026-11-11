@@ -1,0 +1,176 @@
+---
+# Hookshot: native Switch 2 Ocarina of Time recomp, built from the user's dump.
+# See group_vars/all/hookshot.yml and docs/hookshot.md.
+
+- name: Revert Hookshot when requested
+  when: dg_hookshot_revert | bool
+  block:
+    - name: Remove the Hookshot launcher, builder, game folder + desktop entry (registered saves kept)
+      ansible.builtin.include_role:
+        name: revert_guard
+      vars:
+        revert_paths:
+          - "{{ dg_hookshot_launcher }}"
+          - "{{ dg_hookshot_root }}"
+          - "{{ dg_hookshot_game_dir }}"
+          - "{{ dg_desktop_render_dir }}/gaming-hookshot.desktop"
+    - name: Refresh host launchers after removing Hookshot
+      ansible.builtin.command:
+        cmd: "{{ dg_project_root }}/scripts/install-host-launchers.sh"
+      environment:
+        DG_DESKTOP_RENDER_DIR: "{{ dg_desktop_render_dir }}"
+        DG_HOST_APPLICATIONS_DIR: "{{ dg_host_applications_dir }}"
+      changed_when: true
+    - name: Report Hookshot reverted
+      ansible.builtin.debug:
+        msg: >-
+          Hookshot removed. Saves in {{ dg_box_home }}/{{ dg_hookshot_save_rel }}
+          and your dump are untouched.
+
+- name: Install Hookshot
+  when: not (dg_hookshot_revert | bool)
+  block:
+    - name: Create Hookshot directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ dg_hookshot_archive | dirname }}"
+        - "{{ dg_hookshot_builder_dir }}"
+        - "{{ dg_box_home }}/bin"
+
+    - name: Download the pinned Hookshot AppImage
+      ansible.builtin.get_url:
+        url: "{{ dg_hookshot_asset_url }}"
+        dest: "{{ dg_hookshot_archive }}"
+        checksum: "sha256:{{ dg_hookshot_asset_sha256 }}"
+        mode: "0755"
+
+    - name: Extract the AppImage (version-gated; the restricted box has no FUSE)
+      # AppRun works unpacked: without $APPIMAGE it points the builder at
+      # itself, and --cli runs nx2/make_game.py with the bundled Python.
+      ansible.builtin.shell: |
+        set -eu
+        cd "{{ dg_hookshot_builder_dir }}"
+        if grep -qx "{{ dg_hookshot_release_tag }}" .dg-installed-ref 2>/dev/null && [ -x squashfs-root/AppRun ]; then
+          exit 0
+        fi
+        rm -rf squashfs-root
+        "{{ dg_hookshot_archive }}" --appimage-extract >/dev/null
+        printf "%s\n" "{{ dg_hookshot_release_tag }}" > .dg-installed-ref
+        echo hookshot-extracted
+      register: _hookshot_extract
+      changed_when: "'hookshot-extracted' in _hookshot_extract.stdout"
+
+    - name: Look for the dump (.nup, or romfs + exefs)
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ dg_hookshot_nup }}"
+        - "{{ dg_hookshot_dump_dir }}/romfs"
+        - "{{ dg_hookshot_dump_dir }}/exefs"
+      register: _hookshot_dump
+
+    - name: Choose the builder's game arguments
+      ansible.builtin.set_fact:
+        _hookshot_game_args: >-
+          {{ ('--nup ' ~ (dg_hookshot_nup | quote))
+             if _hookshot_dump.results[0].stat.exists else
+             ('--romfs ' ~ ((dg_hookshot_dump_dir ~ '/romfs') | quote) ~
+              ' --exefs ' ~ ((dg_hookshot_dump_dir ~ '/exefs') | quote))
+             if (_hookshot_dump.results[1].stat.isdir | default(false)) and
+                (_hookshot_dump.results[2].stat.isdir | default(false)) else '' }}
+
+    - name: Report the missing dump
+      ansible.builtin.debug:
+        msg: >-
+          No Ocarina of Time (Switch 2) dump found. Put your .nup at
+          {{ dg_hookshot_nup }} (or romfs/ + exefs/ in {{ dg_hookshot_dump_dir }})
+          and rerun install-hookshot.yml. The builder is installed; the game is
+          not built yet.
+      when: _hookshot_game_args | length == 0
+
+    - name: Check the dump is the supported version (build e0f3ccfa)
+      ansible.builtin.shell: >-
+        {{ dg_in_box }} {{ dg_hookshot_apprun | quote }} --cli --check {{ _hookshot_game_args }}
+      register: _hookshot_check
+      changed_when: false
+      when: _hookshot_game_args | length > 0
+
+    - name: Build the game from the dump (10 to 45 minutes; skipped when this release is built)
+      ansible.builtin.shell: |
+        {{ dg_in_box }} sh -lc '
+          set -eu
+          ref="{{ dg_hookshot_game_dir }}/.dg-built-ref"
+          if [ -x "{{ dg_hookshot_game_bin }}" ] && grep -qx "{{ dg_hookshot_release_tag }}" "$ref" 2>/dev/null; then
+            echo hookshot-build-current
+            exit 0
+          fi
+          {{ dg_hookshot_apprun | quote }} --cli {{ _hookshot_game_args }} \
+            --out "{{ dg_hookshot_game_dir }}" \
+            --language {{ dg_hookshot_language | quote }} \
+            --jobs {{ dg_hookshot_build_jobs }}
+          printf "%s\n" "{{ dg_hookshot_release_tag }}" > "$ref"
+          echo hookshot-built
+        '
+      register: _hookshot_build
+      changed_when: "'hookshot-built' in _hookshot_build.stdout"
+      when: _hookshot_game_args | length > 0
+
+    - name: Seed the Hookshot options (missing keys only)
+      when: _hookshot_game_args | length > 0
+      block:
+        - name: Create hookshot_options.ini when absent
+          ansible.builtin.copy:
+            dest: "{{ dg_hookshot_options }}"
+            content: ''
+            force: false
+            mode: "0644"
+
+        - name: Read existing Hookshot options
+          ansible.builtin.slurp:
+            src: "{{ dg_hookshot_options }}"
+          register: _hookshot_saved_options
+
+        - name: Seed missing graphics and controller options
+          ansible.builtin.lineinfile:
+            path: "{{ dg_hookshot_options }}"
+            line: "{{ item.key }}={{ item.value }}"
+            mode: "0644"
+          loop: "{{ dg_hookshot_options_defaults | dict2items }}"
+          loop_control:
+            label: "{{ item.key }}={{ item.value }}"
+          when: not ((_hookshot_saved_options.content | b64decode) is search('(?m)^' ~ item.key ~ '='))
+
+    - name: Deploy the Hookshot launcher
+      ansible.builtin.template:
+        src: hookshot.sh.j2
+        dest: "{{ dg_hookshot_launcher }}"
+        mode: "0755"
+
+    - name: Render the Hookshot desktop entry
+      ansible.builtin.template:
+        src: gaming-hookshot.desktop.j2
+        dest: "{{ dg_desktop_render_dir }}/gaming-hookshot.desktop"
+        mode: "0644"
+
+    - name: Install the desktop entry into the host applications dir
+      ansible.builtin.command:
+        cmd: "{{ dg_project_root }}/scripts/install-host-launchers.sh"
+      environment:
+        DG_DESKTOP_RENDER_DIR: "{{ dg_desktop_render_dir }}"
+        DG_HOST_APPLICATIONS_DIR: "{{ dg_host_applications_dir }}"
+      register: _hookshot_host_launchers
+      changed_when: >-
+        'installed ' in _hookshot_host_launchers.stdout or
+        'removed stale ' in _hookshot_host_launchers.stdout
+
+    - name: Report
+      ansible.builtin.debug:
+        msg: >-
+          Hookshot {{ dg_hookshot_release_tag }}: builder in {{ dg_hookshot_builder_dir }},
+          game in {{ dg_hookshot_game_dir }}
+          ({{ 'built' if _hookshot_game_args | length > 0 else 'NOT built: no dump yet' }}),
+          launcher {{ dg_hookshot_launcher }}, saves in {{ dg_box_home }}/{{ dg_hookshot_save_rel }}.
+          Revert: -e dg_hookshot_revert=true.

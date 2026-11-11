@@ -189,6 +189,7 @@
     - { role: install_dklr,                    tags: [dklr, never] }
     - { role: install_unleashed_recomp,        tags: [unleashed_recomp, never] }
     - { role: install_wwhd_recomp,             tags: [wwhd_recomp, never] }
+    - { role: install_hookshot,                tags: [hookshot, never] }
     - { role: install_mp4_recomp,              tags: [mp4_recomp, never] }
     - { role: install_ultratears,              tags: [ultratears, never] }
     - { role: install_soulcalibur2,            tags: [soulcalibur2, never] }
