@@ -118,7 +118,7 @@ args=(
   --env "WAYLAND_DISPLAY=$wayland_display"
   --env "PULSE_SERVER=unix:/run/user/$uid/pulse/native"
   --env LANG=C.UTF-8
-  --entrypoint /usr/bin/sleep
+  --entrypoint /bin/sh
 )
 if [[ $nvidia_enabled == 1 ]]; then
   args+=(--gpus all)
@@ -164,7 +164,11 @@ cleanup_failed_migration() {
 }
 trap cleanup_failed_migration EXIT
 
-docker create "${args[@]}" "$snapshot" infinity >/dev/null
+# distrobox-enter starts a stopped box and then waits for this line in its
+# logs before it runs the command. Without it, a launcher used while the box
+# is down (the first one after a reboot) hangs for good.
+docker create "${args[@]}" "$snapshot" \
+  -c 'echo container_setup_done; exec sleep infinity' >/dev/null
 docker start "$candidate" >/dev/null
 
 # Bind-mounted input nodes keep host numeric group IDs, which may have
