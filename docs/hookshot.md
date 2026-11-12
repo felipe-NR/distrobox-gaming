@@ -70,6 +70,46 @@ Select+Start) on a pad. Upscaler choice is in-game only: *Graphics →
 Upscaler*. The first visit to each area stutters while shaders compile; later
 visits are smooth.
 
+### NVIDIA DLSS / DLAA (opt-in, RTX)
+
+The release's renderer has no NVIDIA code, so the Upscaler row shows "DLSS and
+DLAA: not in this build". To get them, set both of these in
+`host_vars/localhost.yml` and rerun `install-hookshot.yml`:
+
+```yaml
+dg_hookshot_dlss: true
+dg_hookshot_nvidia_license_accepted: true   # accepts the NVIDIA RTX SDKs license
+```
+
+The builder then fetches NVIDIA's DLSS SDK (v310.9.16, sha256-pinned upstream)
+into `dg_hookshot_ngx_sdk_dir`, compiles its own `hookshot_vk.so` against it and
+puts `libnvidia-ngx-dlss.so.*` in the game folder's `ngx/`. NGX's core,
+`libnvidia-ngx.so`, comes from the host driver through the NVIDIA runtime. The
+build is marked `v2.1.0+dlss` in `.dg-built-ref`, so toggling the flag rebuilds.
+Under NVIDIA's license, **never share or publish a game folder built this way.**
+On Linux, NGX loads the runtime only from a folder whose path is all ASCII.
+
+Right after a DLSS build the role sets `dg_hookshot_dlss_options`: `dlss=1`
+(DLSS) with `resolution=3` (Quality, 67%), `dlss_model=0` (Transformer K, the
+one upstream tested most) and `sharpness=80` (upstream's advice: DLSS and DLAA
+look softer than the game's own upscaler). The menu shows DLAA as Upscaler
+**NVIDIA DLSS** with Render resolution **Native (DLAA, …)**, and one step on
+that row turns it into DLSS Quality.
+
+Measured on the RTX 4060 (8 GB) at a 1080p output, in Kakariko:
+
+| Mode | FPS (average) | GPU a frame | VRAM |
+|-|-|-|-|
+| DLSS Quality | 53 | 9.4 ms | up to 7.0 of 7.1 GB |
+| DLAA | 42 (56% of samples at 35-45) | 17.1 ms | up to 7.0 of 7.1 GB |
+
+DLAA needs more than the 16.7 ms a 60 FPS frame allows, so it stays an in-game
+choice for a stronger card. Check the `vk: status:` lines in the log for VRAM
+use and the `GPU time` lines for the frame cost.
+`vk: NVIDIA DLSS:` lines say whether DLSS
+started and why not. NGX starts only when the menu first opens or at the first
+gameplay upscale, so the title screen has no NGX lines.
+
 With `dg_nvidia_enabled` the launcher sets `VK_ICD_FILENAMES` to the NVIDIA
 Vulkan ICD, so the game sees only the NVIDIA card and `RX_VK_DEVICE` is not
 needed. The box also lists the iGPU, so without the pin Hookshot could start

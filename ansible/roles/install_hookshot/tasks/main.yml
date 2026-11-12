@@ -63,6 +63,18 @@
       register: _hookshot_extract
       changed_when: "'hookshot-extracted' in _hookshot_extract.stdout"
 
+    - name: Require NVIDIA's license for a DLSS build
+      ansible.builtin.assert:
+        that: dg_hookshot_nvidia_license_accepted | bool
+        fail_msg: >-
+          dg_hookshot_dlss needs dg_hookshot_nvidia_license_accepted=true, which
+          accepts the NVIDIA RTX SDKs license (see group_vars/all/hookshot.yml).
+      when: dg_hookshot_dlss | bool
+
+    - name: Name this build (release, plus +dlss when built with NVIDIA's SDK)
+      ansible.builtin.set_fact:
+        _hookshot_build_ref: "{{ dg_hookshot_release_tag }}{{ '+dlss' if dg_hookshot_dlss | bool else '' }}"
+
     - name: Look for the dump (.nup, or romfs + exefs)
       ansible.builtin.stat:
         path: "{{ item }}"
@@ -112,15 +124,21 @@
         _hookshot_build_script: |
           set -eu
           ref="{{ dg_hookshot_game_dir }}/.dg-built-ref"
-          if [ -x "{{ dg_hookshot_game_bin }}" ] && grep -qx "{{ dg_hookshot_release_tag }}" "$ref" 2>/dev/null; then
+          if [ -x "{{ dg_hookshot_game_bin }}" ] && grep -qx "{{ _hookshot_build_ref }}" "$ref" 2>/dev/null; then
             echo hookshot-build-current
             exit 0
           fi
+          {% if dg_hookshot_dlss | bool %}
+          export HOOKSHOT_NGX_SDK="{{ dg_hookshot_ngx_sdk_dir }}"
+          set -- "$@" --fetch-ngx-sdk --accept-nvidia-license
+          {% else %}
+          unset HOOKSHOT_NGX_SDK
+          {% endif %}
           "{{ dg_hookshot_apprun }}" --cli "$@" \
             --out "{{ dg_hookshot_game_dir }}" \
             --language "{{ dg_hookshot_language }}" \
             --jobs "{{ dg_hookshot_build_jobs }}"
-          printf "%s\n" "{{ dg_hookshot_release_tag }}" > "$ref"
+          printf "%s\n" "{{ _hookshot_build_ref }}" > "$ref"
           echo hookshot-built
       register: _hookshot_build
       changed_when: "'hookshot-built' in _hookshot_build.stdout"
@@ -150,6 +168,18 @@
           loop_control:
             label: "{{ item.key }}={{ item.value }}"
           when: not ((_hookshot_saved_options.content | b64decode) is search('(?m)^' ~ item.key ~ '='))
+
+        - name: Turn on DLSS after a DLSS build
+          ansible.builtin.lineinfile:
+            path: "{{ dg_hookshot_options }}"
+            regexp: "^{{ item.key }}="
+            line: "{{ item.key }}={{ item.value }}"
+            backup: true
+            mode: "0644"
+          loop: "{{ dg_hookshot_dlss_options | dict2items }}"
+          loop_control:
+            label: "{{ item.key }}={{ item.value }}"
+          when: dg_hookshot_dlss | bool and _hookshot_build is changed
 
     - name: Deploy the Hookshot launcher
       ansible.builtin.template:
