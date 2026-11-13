@@ -21,6 +21,25 @@ dg_hookshot_asset_url: "https://github.com/{{ dg_hookshot_repo }}/releases/downl
 dg_hookshot_asset_sha256: "2a16b993c8031c969a44ef6eee068d89df8d56a5410ea9e74fcd58248bc909b2"
 dg_hookshot_archive: "{{ dg_roms_final_root }}/PC/releases/{{ dg_hookshot_asset_name }}"
 
+# Files a release's AppImage left out, keyed by release tag and copied into the
+# extracted builder from that release's own tagged source. Only the pinned
+# tag's entry applies, so a new release drops the patch by itself.
+# v2.2.0-rc.1: the AppImage ships only zbic.so in third_party/zbic, but a DLSS
+# build compiles zstd.c into the Vulkan back end and reads both headers
+# (FileNotFoundError on zstd.h). Upstream #2928/#3007, fixed by e0e60920
+# (#2935) after rc.1. Commit 4aee2365 is the v2.2.0-rc.1 tag.
+dg_hookshot_builder_patch_files:
+  v2.2.0-rc.1:
+    - path: third_party/zbic/zstd.c
+      commit: 4aee23659b9436dab2cd7be1ac07333c06246b7c
+      sha256: 6f8e89a93f760ab2e9e48f8bbac766e254aa748a343e495eaa896ac441772e1f
+    - path: third_party/zbic/zstd.h
+      commit: 4aee23659b9436dab2cd7be1ac07333c06246b7c
+      sha256: 787f615a8d12e62811dc198c3003bccf035756da1a953ee5d182ca92849b276a
+    - path: third_party/zbic/zstd_errors.h
+      commit: 4aee23659b9436dab2cd7be1ac07333c06246b7c
+      sha256: 8336c9edf7c11fa7e3730efb05895d4619148f215849a820705e2e3819238cb2
+
 dg_hookshot_root: "{{ dg_box_home }}/tools/hookshot"
 dg_hookshot_builder_dir: "{{ dg_hookshot_root }}/builder"
 dg_hookshot_apprun: "{{ dg_hookshot_builder_dir }}/squashfs-root/AppRun"

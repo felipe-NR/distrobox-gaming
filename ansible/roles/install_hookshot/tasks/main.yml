@@ -63,6 +63,16 @@
       register: _hookshot_extract
       changed_when: "'hookshot-extracted' in _hookshot_extract.stdout"
 
+    - name: Add files the release's AppImage left out (dg_hookshot_builder_patch_files)
+      ansible.builtin.get_url:
+        url: "https://raw.githubusercontent.com/{{ dg_hookshot_repo }}/{{ item.commit }}/{{ item.path }}"
+        dest: "{{ dg_hookshot_builder_dir }}/squashfs-root/usr/share/hookshot/{{ item.path }}"
+        checksum: "sha256:{{ item.sha256 }}"
+        mode: "0644"
+      loop: "{{ dg_hookshot_builder_patch_files.get(dg_hookshot_release_tag, []) }}"
+      loop_control:
+        label: "{{ item.path }}"
+
     - name: Require NVIDIA's license for a DLSS build
       ansible.builtin.assert:
         that: dg_hookshot_nvidia_license_accepted | bool

@@ -90,6 +90,13 @@ build is marked `v2.2.0-rc.1+dlss` in `.dg-built-ref`, so toggling the flag rebu
 Under NVIDIA's license, **never share or publish a game folder built this way.**
 On Linux, NGX loads the runtime only from a folder whose path is all ASCII.
 
+The v2.2.0-rc.1 AppImage cannot build with DLSS on its own: it ships only
+`zbic.so` in `third_party/zbic/`, and the DLSS build compiles `zstd.c` into the
+renderer and reads `zstd.h` and `zstd_errors.h` (upstream #2928/#3007, fixed
+after rc.1 by #2935). The role copies those three files from the rc.1 tag into
+the extracted builder, sha256-checked, through `dg_hookshot_builder_patch_files`.
+The entry is keyed by release tag, so the next release ignores it.
+
 Right after a DLSS build the role sets `dg_hookshot_dlss_options`: `dlss=1`
 (DLSS) with `resolution=3` (Quality, 67%), `dlss_model=0` (Transformer K, the
 one upstream tested most) and `sharpness=80` (upstream's advice: DLSS and DLAA
