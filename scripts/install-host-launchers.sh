@@ -61,9 +61,9 @@ target_exists_in_box() {
   local target="$2"
 
   if [[ "$target" == /* ]]; then
-    distrobox-enter -n "$box" -- test -e "$target" >/dev/null 2>&1
+    distrobox-enter --no-workdir -n "$box" -- test -e "$target" >/dev/null 2>&1
   else
-    distrobox-enter -n "$box" -- sh -lc 'command -v "$1" >/dev/null 2>&1' sh "$target"
+    distrobox-enter --no-workdir -n "$box" -- sh -lc 'command -v "$1" >/dev/null 2>&1' sh "$target"
   fi
 }
 

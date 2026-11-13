@@ -154,7 +154,7 @@ BitDepth = 0
 
 [Emu]
 DirectBoot = true
-ExternalBIOSEnable = true
+ExternalBIOSEnable = {{ 'true' if (_melonds_bios.results | default([]) | rejectattr('stat.exists') | list | length == 0 and _melonds_bios.results | default([]) | length > 0) else 'false' }}
 ConsoleType = 0
 
 [Savestate]

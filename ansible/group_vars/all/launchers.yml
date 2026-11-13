@@ -43,7 +43,7 @@ dg_emulator_launchers:
 
   - name: gaming-ppsspp
     display_name: "PPSSPP (on {{ dg_box_name }})"
-    exec: PPSSPPQt
+    exec: PPSSPPSDL  # Arch ppsspp >= 1.20 ships only the SDL frontend
     icon: ppsspp
     comment: "PSP emulator"
     wm_class: ppsspp

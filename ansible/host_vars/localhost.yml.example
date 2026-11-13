@@ -48,6 +48,10 @@
 # dg_opensc2k_original_archive_sha256: <SHA-256 of the RAR>
 # dg_opensc2k_original_exe_sha256: <SHA-256 of the extracted SIMCITY.EXE>
 #
+# Host without a NAS: back up saves to a plain local directory.
+# dg_save_backup_nas_mount: /home/me/gaming-backups
+# dg_save_backup_require_mount: false
+#
 # Steam library root on the host. This is the ONE host-sudo target in the
 # whole playbook set: create_box chows it to the box UID/GID before the
 # container exists, so `site.yml` needs working host sudo (--ask-become-pass
@@ -247,3 +251,9 @@
 # REA Colin McRae Rally: override if the original PC v1.5 game is elsewhere.
 # dg_cmr1_source_dir: "{{ dg_roms_final_root }}/PC/games/CMRally"
 # dg_cmr1_rally_sha256: "46500c8e22ce3e943b6855eca63ae9288261162347ca76fa36cad77cbb19c0bb"
+
+# Hookshot with NVIDIA DLSS / DLAA (RTX only). The second line accepts the NVIDIA
+# RTX SDKs license; the build then fetches NVIDIA's SDK. Never share the built
+# game folder. See docs/hookshot.md.
+# dg_hookshot_dlss: true
+# dg_hookshot_nvidia_license_accepted: true

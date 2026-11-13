@@ -86,6 +86,18 @@
       overwritten when the GUI writes its config back on shutdown.
   when: _shadps4_processes.rc == 0
 
+- name: Ensure both shadPS4 config directories exist
+  # A from-scratch box has never started shadPS4, so neither config.toml
+  # exists yet; the task below then creates a minimal [GUI] table that
+  # shadPS4 fills in with its defaults on first start.
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ dg_box_home }}/.config/shadPS4"
+    - "{{ dg_box_home }}/.local/share/shadPS4"
+
 - name: Configure shadPS4 addonInstallDir in both config.toml files
   # shadPS4 keeps two parallel config files — one under .config/ (XDG
   # standard, written by Qt) and one under .local/share/ (used by the
@@ -97,7 +109,7 @@
     option: addonInstallDir
     value: '"{{ dg_shadps4_addon_install_dir }}"'
     backup: true
-    create: false
+    create: true
     no_extra_spaces: false
   loop:
     - "{{ dg_box_home }}/.config/shadPS4/config.toml"

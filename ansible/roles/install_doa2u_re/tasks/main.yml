@@ -30,7 +30,7 @@
 
 - name: Install the runtime packages in the box
   ansible.builtin.command:
-    argv: "{{ ['distrobox-enter', '-n', dg_box_name, '--', 'sudo', 'pacman', '-S', '--noconfirm', '--needed'] + dg_doa2u_packages }}"
+    argv: "{{ ['distrobox-enter', '--no-workdir', '-n', dg_box_name, '--', 'sudo', 'pacman', '-S', '--noconfirm', '--needed'] + dg_doa2u_packages }}"
   register: _doa2u_pkgs
   changed_when: "'nothing to do' not in _doa2u_pkgs.stdout"
 
@@ -47,6 +47,7 @@
   ansible.builtin.command:
     argv:
       - distrobox-enter
+      - --no-workdir
       - -n
       - "{{ dg_box_name }}"
       - --
@@ -61,6 +62,7 @@
   ansible.builtin.command:
     argv:
       - distrobox-enter
+      - --no-workdir
       - -n
       - "{{ dg_box_name }}"
       - --
@@ -79,6 +81,7 @@
   ansible.builtin.command:
     argv:
       - distrobox-enter
+      - --no-workdir
       - -n
       - "{{ dg_box_name }}"
       - --

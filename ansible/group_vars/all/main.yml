@@ -75,8 +75,10 @@ dg_host_applications_dir: "{{ ansible_facts.env.HOME }}/.local/share/application
 
 dg_project_root: "{{ playbook_dir | dirname }}"
 
-# Helper for running commands inside the distrobox.
-dg_in_box: "distrobox-enter -n {{ dg_box_name }} --"
+# Helper for running commands inside the distrobox. --no-workdir: the
+# restricted box hides the host home, so entering from a checkout under it
+# (the playbook's cwd) fails with "chdir to cwd ... no such file".
+dg_in_box: "distrobox-enter --no-workdir -n {{ dg_box_name }} --"
 # Opt-in FUSE in the box: AppImages can then mount instead of extracting, at
 # the cost of CAP_SYS_ADMIN (see scripts/migrate-gaming-box.sh). Off means
 # every in-box AppImage launcher must set APPIMAGE_EXTRACT_AND_RUN=1.

@@ -103,6 +103,7 @@ PIN_VARS = {
     "gaming-waverace-recomp": ("waverace_recomp.yml", "dg_wr64_release_tag"),
     "gaming-wipeout-pe": ("wipeout_pe.yml", "dg_wipeout_pe_version"),
     "gaming-wwhd-recomp": ("wwhd_recomp.yml", "dg_wwhd_release_tag"),
+    "gaming-hookshot": ("hookshot.yml", "dg_hookshot_release_tag"),
     "gaming-xerenge": ("xerenge.yml", "dg_xerenge_version"),
     "gaming-vf1": ("vf1_recomp.yml", "dg_vf1_release_tag"),
     "gaming-vf3-recomp": ("vf3_recomp.yml", "dg_vf3_release_tag"),

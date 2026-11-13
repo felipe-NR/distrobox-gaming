@@ -84,13 +84,28 @@
     - libSceLibcInternal.sprx
   register: _module_files
 
+- name: Check for the user's PS4 firmware module dump
+  ansible.builtin.stat:
+    path: "{{ dg_ps4_firmware_modules }}"
+  register: _ps4_firmware_dir
+
 - name: Assert critical modules present
+  # Only when the firmware dump exists: the modules are linked from the
+  # user's own PS4 firmware, which a fresh storage root does not have yet.
   ansible.builtin.assert:
     that: item.stat.exists
     fail_msg: "Missing shadPS4 module: {{ item.item }}"
   loop: "{{ _module_files.results }}"
   loop_control:
     label: "{{ item.item }}"
+  when: _ps4_firmware_dir.stat.isdir | default(false)
+
+- name: Warn that the PS4 firmware modules are not dumped yet
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: no PS4 firmware modules at {{ dg_ps4_firmware_modules }};
+      shadPS4 games needing LLE modules (libSceFont, libSceNgs2, ...) will not boot.
+  when: not (_ps4_firmware_dir.stat.isdir | default(false))
 
 # Generated file verification
 
@@ -106,17 +121,12 @@
     - "{{ dg_dolphin_config_dir }}/Profiles/Wiimote/8BitDo Ultimate 2 Classic.ini"
     - "{{ dg_dolphin_config_dir }}/Profiles/Wiimote/8BitDo Ultimate 2 Nunchuk.ini"
     - "{{ dg_xemu_config }}"
-    - "{{ dg_xemu_bootrom }}"
-    - "{{ dg_xemu_flashrom }}"
-    - "{{ dg_xemu_hdd }}"
     - "{{ dg_shadps4_bin }}"
     - "{{ dg_shadps4_qtlauncher_bin }}"
     - "{{ dg_shadps4_qtlauncher_root }}/current/AppRun"
     - "{{ dg_shadps4_managed_bin }}"
     - "{{ dg_box_home }}/.local/share/shadPS4/custom_configs/{{ dg_shadps4_title_id }}.json"
     - "{{ dg_shadps4_patch_xml }}"
-    - "{{ dg_shadps4_game_dir }}"
-    - "{{ dg_shadps4_game_boot }}"
     - "{{ dg_box_home }}/ES-DE/custom_systems/es_systems.xml"
   register: _file_checks
 
@@ -127,6 +137,27 @@
   loop: "{{ _file_checks.results }}"
   loop_control:
     label: "{{ item.item }}"
+
+# User-supplied dumps (Xbox BIOS/HDD copied from the BIOS root, the default
+# PS4 title). A fresh storage root lacks them: warn instead of failing.
+- name: Stat user-supplied emulator files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ dg_xemu_bootrom }}"
+    - "{{ dg_xemu_flashrom }}"
+    - "{{ dg_xemu_hdd }}"
+    - "{{ dg_shadps4_game_dir }}"
+    - "{{ dg_shadps4_game_boot }}"
+  register: _user_file_checks
+
+- name: Warn about missing user-supplied files
+  ansible.builtin.debug:
+    msg: "WARNING: not supplied yet: {{ item.item }}"
+  loop: "{{ _user_file_checks.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: not item.stat.exists
 
 # Xenia Manager verification (optional)
 

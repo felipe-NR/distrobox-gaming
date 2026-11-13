@@ -24,6 +24,11 @@ dg_save_backup_nas_mount: /mnt/gigachad
 
 dg_backup_root: "{{ dg_save_backup_nas_root }}/dg-save"
 
+# Refuse to write backups unless dg_save_backup_nas_mount is a mountpoint, so
+# an unmounted NAS never silently fills the local disk. A host without a NAS
+# that backs up to a plain local directory sets this false.
+dg_save_backup_require_mount: true
+
 # Restore is opt-in: set true (e.g. on a from-scratch remount) to have the
 # backup_saves role pull saves back from the NAS after deploying the tooling.
 # It uses --ignore-existing, so it never clobbers a save already on the box.
@@ -225,6 +230,7 @@ dg_save_sets:
   - { name: sonic-fallen-star,    src: "Games/sonic-fallen-star/Sonic and the Fallen Star (V1.1.1 Edit 4)/Data" }  # Clickteam Fusion saves live next to the exe (re-extracted on rebuild)
   - { name: sm64ds-port,          src: "Games/sm64ds-port/save" }          # SM64 DS port cartridge save + save states (re-extracted gamedir on rebuild)
   - { name: wwhd-recomp,          src: "tools/wwhd-recomp/data/save" }     # Wind Waker HD recomp saves + Picto Box pics (game rebuilt from dump on rebuild)
+  - { name: hookshot,             src: [".local/share/hookshot", "file:Games/Hookshot/hookshot_options.ini"] }  # Hookshot (OoT Switch 2 recomp) saves + menu options/controls (game rebuilt from dump on rebuild)
   - { name: mp4-recomp,           src: [".local/share/MetroidPrime4Recomp/Metroid Prime 4 Beyond_data/save",
                                         "file:.local/share/MetroidPrime4Recomp/Metroid Prime 4 Beyond.ini"] }  # MP4 Beyond recomp saves + settings (game rebuilt from dump on rebuild)
   # Virtua Fighter recomp runs portable: EEPROM, NVRAM and ranking names sit

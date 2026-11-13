@@ -142,6 +142,15 @@ bind mount are untouched.
   upgrade restarts the runtime (which also restarts the box, wiping its
   tmpfs `/run` — see `docs/box-steam-dbus.md`) and may leave the daemon
   stopped (`sudo systemctl start containerd docker`).
+- **NVIDIA Container Toolkit (NVIDIA hosts).** With `dg_nvidia_enabled`
+  the restricted box is created with `docker create --gpus all`, which
+  needs the toolkit registered as a Docker runtime:
+  `sudo pacman -S --needed nvidia-container-toolkit`, then
+  `sudo nvidia-ctk runtime configure --runtime=docker` and
+  `sudo systemctl restart docker`. `check_host` and
+  `migrate-gaming-box.yml` assert the `nvidia` runtime is present. When an
+  AMD-only box is switched to NVIDIA, the migration defers the `/usr/lib32`
+  NVIDIA repair until `site.yml` has downloaded `lib32-nvidia-utils`.
 - **Run in the foreground.** Do not launch a full rebuild detached or
   backgrounded (`nohup … &`, a tmux pane you detach from, etc.). Slow
   steps — Wine installers, large archive extraction — have been killed
@@ -156,6 +165,12 @@ bind mount are untouched.
   ```
 
   Only pass the tags for games/features you have assets staged for.
+
+  After changing `dg_nvidia_enabled`, run the installed opt-in roles
+  again as well. A plain `site.yml` re-renders the core launchers and
+  ES-DE, but these opt-in roles write `dg_gpu_env` or the NVIDIA ICD pin
+  into their own launchers and keep the old GPU setting until rerun:
+  `install_hookshot`, `install_lichii` and `install_unleashed_recomp`.
 - **Restore save data (only if the box `$HOME` was lost).** A container
   prune leaves the bind-mounted home — and therefore all saves —
   untouched. But if you re-provisioned onto a *fresh* box home, pull the
