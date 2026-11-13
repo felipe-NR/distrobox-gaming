@@ -64,11 +64,14 @@ Seeded into `hookshot_options.ini` only when a key is missing
 | `fullscreen` | `1` | |
 | `controller_in_background` | `1` | Pad keeps working if focus moves |
 
-Anisotropic filtering defaults to 16x and the frame cap to 60 FPS, so the role
-leaves them. The in-game menu opens with **Insert/F1**, or **Home** (or
-Select+Start) on a pad. Upscaler choice is in-game only: *Graphics →
-Upscaler*. The first visit to each area stutters while shaders compile; later
-visits are smooth.
+The role also sets `dg_hookshot_options_enforced` on every run, over the menu:
+`anisotropic_filtering=4` (16x). Hookshot's own default is 16x, but an options
+file from an older build carried `anisotropic_filtering=1`, which v2.2.0 reads
+as 2x (0 the game's own, 1 2x, 2 4x, 3 8x, 4 16x). The frame cap defaults to
+60 FPS, so the role leaves it. The in-game menu opens with **Insert**, **F1**
+or **Esc**, or **Home** (or Select+Start) on a pad. Upscaler choice is in-game
+only: *Graphics → Upscaler*. The first visit to each area stutters while
+shaders compile; later visits are smooth.
 
 ### NVIDIA DLSS / DLAA (opt-in, RTX)
 
