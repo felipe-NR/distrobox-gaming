@@ -39,7 +39,7 @@ untouched).
 
 ## How it works
 
-- Downloads the pinned `Hookshot-v2.1.0-x86_64.AppImage` (sha256 in
+- Downloads the pinned `Hookshot-v2.2.0-rc.1-x86_64.AppImage` (sha256 in
   `group_vars/all/hookshot.yml`) and extracts it with `--appimage-extract`,
   because the restricted box has no FUSE. `AppRun --cli` runs `nx2/make_game.py`
   with the bundled Python.
@@ -83,9 +83,10 @@ dg_hookshot_nvidia_license_accepted: true   # accepts the NVIDIA RTX SDKs licens
 
 The builder then fetches NVIDIA's DLSS SDK (v310.9.16, sha256-pinned upstream)
 into `dg_hookshot_ngx_sdk_dir`, compiles its own `hookshot_vk.so` against it and
-puts `libnvidia-ngx-dlss.so.*` in the game folder's `ngx/`. NGX's core,
+puts `libnvidia-ngx-dlss.so.*` (DLSS) and, from v2.2.0, `libnvidia-ngx-dlssg.so.*`
+(DLSS Frame Generation) in the game folder's `ngx/`. NGX's core,
 `libnvidia-ngx.so`, comes from the host driver through the NVIDIA runtime. The
-build is marked `v2.1.0+dlss` in `.dg-built-ref`, so toggling the flag rebuilds.
+build is marked `v2.2.0-rc.1+dlss` in `.dg-built-ref`, so toggling the flag rebuilds.
 Under NVIDIA's license, **never share or publish a game folder built this way.**
 On Linux, NGX loads the runtime only from a folder whose path is all ASCII.
 
@@ -96,15 +97,31 @@ look softer than the game's own upscaler). The menu shows DLAA as Upscaler
 **NVIDIA DLSS** with Render resolution **Native (DLAA, …)**, and one step on
 that row turns it into DLSS Quality.
 
-Measured on the RTX 4060 (8 GB) at a 1080p output, in Kakariko:
+Measured on the RTX 4060 (8 GB, on OCuLink) at a 1080p output on a 60 Hz panel
+without VRR, in gameplay (the menu over the title screen draws almost nothing and
+always shows 60):
 
-| Mode | FPS (average) | GPU a frame | VRAM |
-|-|-|-|-|
-| DLSS Quality | 53 | 9.4 ms | up to 7.0 of 7.1 GB |
-| DLAA | 42 (56% of samples at 35-45) | 17.1 ms | up to 7.0 of 7.1 GB |
+| Release | Mode | Kakariko | Hyrule Field | GPU a frame |
+|-|-|-|-|-|
+| v2.1.0 | DLSS Quality | 53 FPS | | 9.4 ms |
+| v2.1.0 | DLAA | 42 FPS | | 17.1 ms |
+| v2.2.0-rc.1 | DLSS Quality | 40-54 FPS | | 12-15 ms |
+| v2.2.0-rc.1 | DLAA | 44-48 FPS | ~29 FPS | 13 / 24 ms |
+| v2.2.0-rc.1 | DLAA + Frame generation 2x | 58-60 shown, base 30 | | |
+| v2.2.0-rc.1 | DLSS Quality + Frame generation Auto (built-in) | ~60 shown, base 40-50, 0 late | | 12-15 ms |
 
-DLAA needs more than the 16.7 ms a 60 FPS frame allows, so it stays an in-game
-choice for a stronger card. Check the `vk: status:` lines in the log for VRAM
+On this box DLSS Quality misses 60 with GPU time to spare: the log's
+`GPU-bound wait` is 0 ms and the time goes to the CPU replay (~10 ms a frame)
+and to readbacks of GPU results (3.6-4.5 ms each), so lower render settings do
+not help. Frame generation fills the gap in two ways. A fixed **2x** on a 60 Hz
+panel switches V-Sync Auto to FIFO and locks the game at 30 real frames, which
+adds a frame of input delay. **Auto** (`frame_generation=1`) makes a frame only
+for a refresh the game has not filled, keeps mailbox and a 40-50 base; with
+**Frame generation by: Built-in FG** (`frame_generation_by=1`) and **NVIDIA
+Reflex: On + Boost** (`nvidia_reflex=2`) that was the best mix of delay and
+smoothness here. These are menu choices; set them in `dg_hookshot_dlss_options`
+in `host_vars/localhost.yml` to have a DLSS rebuild apply them. DLAA stays an
+in-game choice for a stronger card. Check the `vk: status:` lines in the log for VRAM
 use and the `GPU time` lines for the frame cost.
 `vk: NVIDIA DLSS:` lines say whether DLSS
 started and why not. NGX starts only when the menu first opens or at the first

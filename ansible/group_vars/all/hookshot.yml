@@ -15,10 +15,10 @@
 # `hookshot` launcher is skipped: it self-updates, which would undo the pin.
 
 dg_hookshot_repo: NotRexed/Hookshot
-dg_hookshot_release_tag: v2.1.0
+dg_hookshot_release_tag: v2.2.0-rc.1
 dg_hookshot_asset_name: "Hookshot-{{ dg_hookshot_release_tag }}-x86_64.AppImage"
 dg_hookshot_asset_url: "https://github.com/{{ dg_hookshot_repo }}/releases/download/{{ dg_hookshot_release_tag }}/{{ dg_hookshot_asset_name }}"
-dg_hookshot_asset_sha256: "c0b2e958ae00dc560072154f890b9be422724abd9bb522d6afd9922788b86e02"
+dg_hookshot_asset_sha256: "2a16b993c8031c969a44ef6eee068d89df8d56a5410ea9e74fcd58248bc909b2"
 dg_hookshot_archive: "{{ dg_roms_final_root }}/PC/releases/{{ dg_hookshot_asset_name }}"
 
 dg_hookshot_root: "{{ dg_box_home }}/tools/hookshot"
