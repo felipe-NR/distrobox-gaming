@@ -1,0 +1,92 @@
+---
+# Longshot: static recompilation of The Legend of Zelda: Ocarina of Time for
+# Nintendo Switch 2 (MagicBeanDev/Longshot on git.magicbean.dev, a Forgejo
+# host). It continues Hookshot (NotRexed/Hookshot): the maintainers moved
+# there, and the nx2 builder flow is the same with hookshot renamed longshot.
+# This is its own role (install_longshot) beside install_hookshot; neither
+# touches the other's files. Opt-in. See docs/longshot.md.
+#
+# The release ships NO game code. The AppImage carries the builder and its
+# Python; the build tools (clang + lld, a glibc 2.35 sysroot, FFmpeg, SDL2,
+# the Vulkan headers) are tools.lock's linux-x64 lines, downloaded and
+# sha256-checked by the first `AppRun --cli` (about 170 MB). The role
+# extracts the AppImage (the restricted box has no FUSE), runs
+#   AppRun --cli --nup <dump> --out <game dir> --language <code>
+# once, and starts the built bin/longshot directly. The game folder's own
+# `longshot` launcher is skipped: it self-updates, which would undo the pin.
+
+dg_longshot_forge: https://git.magicbean.dev
+dg_longshot_repo: MagicBeanDev/Longshot
+# No stable yet (the first will be v3.0.0). Pin an rc tag; never a
+# nightly-<n>-<sha> tag: one is cut on every push and only the newest five stay.
+dg_longshot_release_tag: v3.0.0-rc.4
+dg_longshot_asset_name: "Longshot-{{ dg_longshot_release_tag }}-x86_64.AppImage"
+dg_longshot_asset_url: "{{ dg_longshot_forge }}/{{ dg_longshot_repo }}/releases/download/{{ dg_longshot_release_tag }}/{{ dg_longshot_asset_name }}"
+# From the release's SHA256SUMS.
+dg_longshot_asset_sha256: "7a87f29499e2d71d3a1f0ab20d5d532095a2663785617f7e20c2d2b2b83c54ff"
+dg_longshot_archive: "{{ dg_roms_final_root }}/PC/releases/{{ dg_longshot_asset_name }}"
+
+dg_longshot_root: "{{ dg_box_home }}/tools/longshot"
+dg_longshot_builder_dir: "{{ dg_longshot_root }}/builder"
+dg_longshot_apprun: "{{ dg_longshot_builder_dir }}/squashfs-root/AppRun"
+# LONGSHOT_BUILDER_HOME: the builder keeps its toolchains in
+# <this>/longshot/builder/toolchains/<version>. Its default is
+# ~/.local/share/longshot/builder, beside the saves; pointing it here keeps
+# the save folder holding saves only.
+dg_longshot_builder_home: "{{ dg_longshot_root }}/home"
+dg_longshot_game_dir: "{{ dg_box_home }}/Games/Longshot"
+dg_longshot_game_bin: "{{ dg_longshot_game_dir }}/bin/longshot"
+dg_longshot_options: "{{ dg_longshot_game_dir }}/longshot_options.ini"
+dg_longshot_launcher: "{{ dg_box_home }}/bin/longshot"
+# Saves follow XDG on Linux: ~/.local/share/longshot/save (box home). Hookshot
+# writes the same save files to ~/.local/share/hookshot/save.
+dg_longshot_save_rel: .local/share/longshot/save
+dg_longshot_hookshot_save_rel: .local/share/hookshot/save
+# Copy Hookshot's saves into Longshot once, only while Longshot has no save
+# folder yet. A copy: Hookshot's folder is never moved or changed.
+dg_longshot_import_hookshot_saves: true
+
+# The user's own dump, the same one Hookshot builds from: program
+# 0400486024DEC000, update v131072 (build e0f3ccfa). A .nup wins when it
+# exists; otherwise the role looks for romfs/ + exefs/ in dg_longshot_dump_dir.
+dg_longshot_dump_dir: "{{ dg_roms_final_root }}/switch2/The Legend of Zelda Ocarina of Time"
+dg_longshot_nup: "{{ dg_longshot_dump_dir }}/zelda-oot.nup"
+dg_longshot_language: pt-BR
+dg_longshot_build_jobs: "{{ ansible_facts.processor_vcpus | default(8) }}"
+dg_longshot_revert: false
+
+# NVIDIA DLSS / DLAA (opt-in). With both flags on, the builder downloads
+# NVIDIA's DLSS SDK into dg_longshot_ngx_sdk_dir, compiles its Vulkan back end
+# against it and puts DLSS's runtime in the game folder's ngx/. Setting
+# dg_longshot_nvidia_license_accepted means you accept the NVIDIA RTX SDKs
+# license: https://github.com/NVIDIA/DLSS/blob/main/LICENSE.txt
+# A game folder built this way must never be shared or published.
+dg_longshot_dlss: false
+dg_longshot_nvidia_license_accepted: false
+dg_longshot_ngx_sdk_dir: "{{ dg_longshot_root }}/ngx-sdk"
+# Set (not only seeded) right after a DLSS build. `dlss` is the Upscaler row
+# (0 game's, 1 DLSS, 2 DLAA, 3 FSR 3.1, 4 FSR 4, 5 FSR 4 Native AA, 6 off,
+# 7 XeSS, 8 XeSS Native AA); resolution=3 is the Quality render resolution,
+# dlss_model=0 the Transformer (K) model. Same values as Hookshot's.
+dg_longshot_dlss_options:
+  dlss: '1'
+  resolution: '3'
+  dlss_model: '0'
+  sharpness: '80'
+
+# Set on every run, over the menu: the graphics floor this repo holds
+# (anisotropic_filtering: 0 game's, 1 2x, 2 4x, 3 8x, 4 16x).
+dg_longshot_options_enforced:
+  anisotropic_filtering: '4'
+
+# Seeded only when a key is missing, so in-game menu changes survive reruns.
+# A menu row's key is its name lowercased with spaces as underscores.
+# quality_preset: 0 Custom, 1 Minimum (4GB), 2 Low (6GB), 3 Balanced (8GB),
+# 4 High (12GB), 5 Ultra (16GB+), 6 Auto. Ceiling for an 8 GB GPU on a
+# 1080p60 panel; on a 4K box with a big GPU set output_res=3840x2160 and
+# quality_preset=5.
+dg_longshot_options_defaults:
+  quality_preset: '3'
+  output_res: 1920x1080
+  fullscreen: '1'
+  controller_in_background: '1'
