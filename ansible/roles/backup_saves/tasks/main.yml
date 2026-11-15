@@ -9,6 +9,7 @@
   ansible.builtin.command:
     argv: [mountpoint, -q, "{{ dg_save_backup_nas_mount }}"]
   changed_when: false
+  when: dg_save_backup_require_mount | bool
 
 - name: Ensure the NAS save-backup root exists
   ansible.builtin.file:

@@ -1,0 +1,101 @@
+---
+# Hookshot: static recompilation of The Legend of Zelda: Ocarina of Time for
+# Nintendo Switch 2 (NotRexed/Hookshot). The game's AArch64 code is lifted to C
+# and compiled into a native Linux ELF, Horizon OS is reimplemented, and NVN2
+# graphics run on Vulkan 1.3 with mesh shaders. Opt-in role install_hookshot.
+# See docs/hookshot.md.
+#
+# The release ships NO game code: the AppImage (Hookshot Builder, with its own
+# clang, sysroot and Python) builds the game from the user's own dump, program
+# 0400486024DEC000 with update v131072 (build e0f3ccfa), given as a .nup
+# package or as extracted romfs/ + exefs/ folders. The role extracts the
+# AppImage (the restricted box has no FUSE), runs its headless CLI once
+#   AppRun --cli --nup <dump> --out <game dir> --language <code>
+# and then starts the built bin/hookshot directly. The game folder's own
+# `hookshot` launcher is skipped: it self-updates, which would undo the pin.
+
+dg_hookshot_repo: NotRexed/Hookshot
+dg_hookshot_release_tag: v2.2.0-rc.1
+dg_hookshot_asset_name: "Hookshot-{{ dg_hookshot_release_tag }}-x86_64.AppImage"
+dg_hookshot_asset_url: "https://github.com/{{ dg_hookshot_repo }}/releases/download/{{ dg_hookshot_release_tag }}/{{ dg_hookshot_asset_name }}"
+dg_hookshot_asset_sha256: "2a16b993c8031c969a44ef6eee068d89df8d56a5410ea9e74fcd58248bc909b2"
+dg_hookshot_archive: "{{ dg_roms_final_root }}/PC/releases/{{ dg_hookshot_asset_name }}"
+
+# Files a release's AppImage left out, keyed by release tag and copied into the
+# extracted builder from that release's own tagged source. Only the pinned
+# tag's entry applies, so a new release drops the patch by itself.
+# v2.2.0-rc.1: the AppImage ships only zbic.so in third_party/zbic, but a DLSS
+# build compiles zstd.c into the Vulkan back end and reads both headers
+# (FileNotFoundError on zstd.h). Upstream #2928/#3007, fixed by e0e60920
+# (#2935) after rc.1. Commit 4aee2365 is the v2.2.0-rc.1 tag.
+dg_hookshot_builder_patch_files:
+  v2.2.0-rc.1:
+    - path: third_party/zbic/zstd.c
+      commit: 4aee23659b9436dab2cd7be1ac07333c06246b7c
+      sha256: 6f8e89a93f760ab2e9e48f8bbac766e254aa748a343e495eaa896ac441772e1f
+    - path: third_party/zbic/zstd.h
+      commit: 4aee23659b9436dab2cd7be1ac07333c06246b7c
+      sha256: 787f615a8d12e62811dc198c3003bccf035756da1a953ee5d182ca92849b276a
+    - path: third_party/zbic/zstd_errors.h
+      commit: 4aee23659b9436dab2cd7be1ac07333c06246b7c
+      sha256: 8336c9edf7c11fa7e3730efb05895d4619148f215849a820705e2e3819238cb2
+
+dg_hookshot_root: "{{ dg_box_home }}/tools/hookshot"
+dg_hookshot_builder_dir: "{{ dg_hookshot_root }}/builder"
+dg_hookshot_apprun: "{{ dg_hookshot_builder_dir }}/squashfs-root/AppRun"
+dg_hookshot_game_dir: "{{ dg_box_home }}/Games/Hookshot"
+dg_hookshot_game_bin: "{{ dg_hookshot_game_dir }}/bin/hookshot"
+dg_hookshot_options: "{{ dg_hookshot_game_dir }}/hookshot_options.ini"
+dg_hookshot_launcher: "{{ dg_box_home }}/bin/hookshot"
+# Saves follow XDG on Linux: ~/.local/share/hookshot (box home).
+dg_hookshot_save_rel: .local/share/hookshot
+
+# The user's own dump. A .nup wins when it exists; otherwise the role looks for
+# romfs/ + exefs/ in dg_hookshot_dump_dir. Missing dump: the builder is
+# installed and the role stops before the build with a pointer to these paths.
+dg_hookshot_dump_dir: "{{ dg_roms_final_root }}/switch2/The Legend of Zelda Ocarina of Time"
+dg_hookshot_nup: "{{ dg_hookshot_dump_dir }}/zelda-oot.nup"
+dg_hookshot_language: pt-BR
+dg_hookshot_build_jobs: "{{ ansible_facts.processor_vcpus | default(8) }}"
+dg_hookshot_revert: false
+
+# NVIDIA DLSS / DLAA (opt-in). The release's renderer has no NVIDIA code: with
+# both flags on, the builder downloads NVIDIA's DLSS SDK (v310.9.16, pinned and
+# sha256-checked upstream) into dg_hookshot_ngx_sdk_dir, compiles its own
+# hookshot_vk.so against it and puts DLSS's runtime in the game folder's ngx/.
+# Setting dg_hookshot_nvidia_license_accepted means you accept the NVIDIA RTX
+# SDKs license:
+# https://github.com/NVIDIA/DLSS/blob/9981c6350dc58c0ce21f024fd65e31e851c31689/LICENSE.txt
+# A game folder built this way must never be shared or published.
+dg_hookshot_dlss: false
+dg_hookshot_nvidia_license_accepted: false
+dg_hookshot_ngx_sdk_dir: "{{ dg_hookshot_root }}/ngx-sdk"
+# Set (not only seeded) right after a DLSS build: DLSS with the Quality render
+# resolution (resolution=3, 67%), the Transformer (K) model, and the sharpness
+# upstream suggests for DLSS's softer picture. Measured on the RTX 4060 at a
+# 1080p output in Kakariko: DLSS Quality 53 FPS on average at 9.4 ms of GPU a
+# frame; DLAA (dlss=2, resolution=1) 42 FPS at 17.1 ms, under the 60 FPS bar.
+# Use DLAA on a card that holds 60 with it.
+dg_hookshot_dlss_options:
+  dlss: '1'
+  resolution: '3'
+  dlss_model: '0'
+  sharpness: '80'
+
+# Set on every run, over the menu: the graphics floor this repo holds. Hookshot
+# defaults to 16x anisotropic filtering (4), but an options file from an older
+# build carried anisotropic_filtering=1, which v2.2.0 reads as 2x (0 the game's
+# own 1x/2x, 1 2x, 2 4x, 3 8x, 4 16x).
+dg_hookshot_options_enforced:
+  anisotropic_filtering: '4'
+
+# Seeded only when a key is missing, so in-game menu changes survive reruns.
+# Ceiling for an 8 GB GPU (RTX 4060, or a Radeon 780M with an 8 GiB carve-out)
+# on a 1080p60 panel: the Balanced (8 GB) preset, native output, fullscreen,
+# 60 FPS cap. On a 4K box with a big GPU set output_res=3840x2160 and
+# quality_preset=5 (Ultra, 16 GB+).
+dg_hookshot_options_defaults:
+  quality_preset: '3'
+  output_res: 1920x1080
+  fullscreen: '1'
+  controller_in_background: '1'

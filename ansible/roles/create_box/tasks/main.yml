@@ -47,6 +47,7 @@
 - name: Create distrobox
   ansible.builtin.command: >-
     distrobox create
+    --yes
     --name {{ dg_box_name }}
     --image {{ dg_image }}
     --home {{ dg_box_home }}

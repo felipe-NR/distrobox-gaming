@@ -80,10 +80,11 @@ fi
 
 # The home, ROMs and Steam library are bind mounts and are not copied into
 # this image. The image holds the already-installed Arch packages only.
+# Always commit afresh: the tag is keyed by container ID, which does not change
+# when packages are added, so a snapshot left by an earlier failed attempt
+# would miss them (e.g. wine installed after the first try).
 snapshot="dg-gaming-snapshot:${source_id:0:12}"
-if ! docker image inspect "$snapshot" >/dev/null 2>&1; then
-  docker commit "$name" "$snapshot" >/dev/null
-fi
+docker commit "$name" "$snapshot" >/dev/null
 
 args=(
   --name "$candidate"
@@ -117,7 +118,7 @@ args=(
   --env "WAYLAND_DISPLAY=$wayland_display"
   --env "PULSE_SERVER=unix:/run/user/$uid/pulse/native"
   --env LANG=C.UTF-8
-  --entrypoint /usr/bin/sleep
+  --entrypoint /bin/sh
 )
 if [[ $nvidia_enabled == 1 ]]; then
   args+=(--gpus all)
@@ -140,14 +141,11 @@ fi
 
 # Steam and SDL need input nodes. Docker's default device cgroup blocks new
 # nodes after hotplug, so allow input's major while keeping other devices out.
+# No hidraw node is passed: a --device path is fixed at create time and Docker
+# refuses to start the box when it is missing, and hidraw numbers change across
+# reboots and reconnects. The pad reaches games through evdev in /dev/input.
 args+=(--mount type=bind,src=/dev/input,dst=/dev/input)
 args+=(--device-cgroup-rule 'c 13:* rwm')
-for link in /dev/input/by-id/*8BitDo* /dev/input/by-id/*8bitdo*; do
-  [[ -e $link ]] || continue
-  device=$(readlink -f "$link")
-  [[ $device == /dev/hidraw* ]] || continue
-  args+=(--device "$device:$device:rwm")
-done
 
 migration_stage=precutover
 cleanup_failed_migration() {
@@ -166,13 +164,17 @@ cleanup_failed_migration() {
 }
 trap cleanup_failed_migration EXIT
 
-docker create "${args[@]}" "$snapshot" infinity >/dev/null
+# distrobox-enter starts a stopped box and then waits for this line in its
+# logs before it runs the command. Without it, a launcher used while the box
+# is down (the first one after a reboot) hangs for good.
+docker create "${args[@]}" "$snapshot" \
+  -c 'echo container_setup_done; exec sleep infinity' >/dev/null
 docker start "$candidate" >/dev/null
 
 # Bind-mounted input nodes keep host numeric group IDs, which may have
 # different names in Arch. Add the game user to those exact numeric groups.
 device_groups=()
-for device in /dev/input/event0 /dev/hidraw* /dev/dri/card* /dev/dri/renderD*; do
+for device in /dev/input/event0 /dev/dri/card* /dev/dri/renderD*; do
   [[ -e $device ]] || continue
   device_groups+=("$(stat -c %g "$device")")
 done
@@ -182,6 +184,12 @@ for device_gid in $(printf '%s\n' "${device_groups[@]}" | sort -un); do
   fi
   docker exec "$candidate" usermod -aG "$device_gid" "$username"
 done
+# Earlier migrations added the user to the hidraw nodes' group, which is root
+# on hosts that create them root:root. The snapshot keeps that membership, so
+# drop it: no device in the box needs it now.
+if docker exec "$candidate" id -nG "$username" | tr ' ' '\n' | grep -qx root; then
+  docker exec "$candidate" gpasswd -d "$username" root >/dev/null
+fi
 
 check='set -eu
 test ! -e "/home/$3/.ssh"
@@ -209,12 +217,6 @@ command -v steam >/dev/null
 sudo -n true'
 docker exec --user "$username" --workdir "$box_home" "$candidate" \
   sh -lc "$check" sh "$rom_root" "$box_home" "$username" "$xsocket" "$backup_mount" "$nvidia_enabled"
-for link in /dev/input/by-id/*8BitDo* /dev/input/by-id/*8bitdo*; do
-  [[ -e $link ]] || continue
-  device=$(readlink -f "$link")
-  [[ $device == /dev/hidraw* ]] || continue
-  docker exec --user "$username" "$candidate" test -r "$device"
-done
 if [[ $nvidia_enabled == 1 ]]; then
   docker exec --user "$username" "$candidate" nvidia-smi --query-gpu=name --format=csv,noheader >/dev/null
 fi

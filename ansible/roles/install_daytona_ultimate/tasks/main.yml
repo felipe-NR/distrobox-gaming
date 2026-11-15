@@ -124,6 +124,7 @@
       ansible.builtin.command:
         argv:
           - distrobox-enter
+          - --no-workdir
           - -n
           - "{{ dg_box_name }}"
           - --
@@ -165,6 +166,7 @@
       ansible.builtin.command:
         argv:
           - distrobox-enter
+          - --no-workdir
           - -n
           - "{{ dg_box_name }}"
           - --

@@ -16,7 +16,7 @@ set -eu
 
 box="${1:-gaming}"
 
-broken=$(distrobox-enter -n "$box" -- sh -lc '
+broken=$(distrobox-enter --no-workdir -n "$box" -- sh -lc '
   for pkg in $(pacman -Qmq); do pacman -Qlq "$pkg" 2>/dev/null; done \
     | grep -E "/usr/(bin|lib)/[^/]*$" \
     | while read -r f; do
@@ -41,7 +41,7 @@ echo "box-soname-sweep: all AUR package binaries link clean."
 # at 2x with unreachable controls (2026-09-28). install_xenia enforces 96
 # (dg_xenia_wine_dpi); flag any drift here so a box update that changes DPI
 # behavior is caught before the user hits it.
-box_home=$(distrobox-enter -n "$box" -- sh -c 'printf %s "$HOME"')
+box_home=$(distrobox-enter --no-workdir -n "$box" -- sh -c 'printf %s "$HOME"')
 reg="$box_home/wineprefixes/xenia-manager/user.reg"
 if [ -f "$reg" ]; then
   hex=$(grep -m1 '"LogPixels"' "$reg" | sed -n 's/.*dword:0*\([0-9a-fA-F]*\).*/\1/p')

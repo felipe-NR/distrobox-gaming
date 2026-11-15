@@ -27,7 +27,7 @@ MANIFEST="${DG_SAVE_MANIFEST:-$CONF_DIR/save-manifest.tsv}"
 : "${DG_BACKUP_MOUNT:?DG_BACKUP_MOUNT not set (rendered into $CONF_DIR/backup.env by the backup_saves role)}"
 [ -f "$MANIFEST" ] || { echo "restore-saves: no manifest at $MANIFEST" >&2; exit 1; }
 [ -d "$DG_SAVE_BASE" ] || { echo "restore-saves: box home absent: $DG_SAVE_BASE" >&2; exit 1; }
-mountpoint -q "$DG_BACKUP_MOUNT" || {
+[ "${DG_BACKUP_REQUIRE_MOUNT:-1}" != 1 ] || mountpoint -q "$DG_BACKUP_MOUNT" || {
   echo "restore-saves: NAS is not mounted at $DG_BACKUP_MOUNT" >&2; exit 1; }
 
 MODE="--ignore-existing"   # default: never clobber a save already on the box

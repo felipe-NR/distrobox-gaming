@@ -3,6 +3,7 @@
   ansible.builtin.command:
     argv:
       - distrobox-enter
+      - --no-workdir
       - -n
       - "{{ dg_box_name }}"
       - --
@@ -37,7 +38,7 @@
 
 - name: Check RetroArch inside the gaming box
   ansible.builtin.command:
-    argv: [distrobox-enter, -n, "{{ dg_box_name }}", --, sh, -lc, "command -v retroarch"]
+    argv: [distrobox-enter, --no-workdir, -n, "{{ dg_box_name }}", --, sh, -lc, "command -v retroarch"]
   register: _atari_st_retroarch
   changed_when: false
   failed_when: false
@@ -51,7 +52,7 @@
 
 - name: Check the Atari ST ROM directory inside the gaming box
   ansible.builtin.command:
-    argv: [distrobox-enter, -n, "{{ dg_box_name }}", --, test, -d, "{{ dg_atari_st_rom_dir }}"]
+    argv: [distrobox-enter, --no-workdir, -n, "{{ dg_box_name }}", --, test, -d, "{{ dg_atari_st_rom_dir }}"]
   register: _atari_st_rom_dir
   changed_when: false
   failed_when: false

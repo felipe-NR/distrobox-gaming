@@ -1,0 +1,12 @@
+{% from 'ogm-desktop-entry.j2' import ogm_metadata with context -%}
+[Desktop Entry]
+Name=Ocarina of Time · Hookshot (on {{ dg_box_name }})
+Exec=/usr/bin/distrobox-enter -n {{ dg_box_name }} -- {{ dg_hookshot_launcher }}
+Terminal=false
+Type=Application
+Icon=applications-games
+Comment=The Legend of Zelda: Ocarina of Time (Switch 2), native static recompilation on Vulkan, built from your own dump.
+Categories=Game;
+Keywords=zelda;ocarina;oot;switch 2;hookshot;recomp;recompilation;nintendo;
+StartupWMClass=io.github.NotRexed.Hookshot
+{{ ogm_metadata('gaming-hookshot') }}

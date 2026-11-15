@@ -84,7 +84,7 @@ dg_esde_systems:
     path: "{{ dg_emudeck_root }}/roms_mid/psp"
     extension: ".chd .CHD .cso .CSO .elf .ELF .iso .ISO .pbp .PBP .prx .PRX .7z .7Z .zip .ZIP"
     commands:
-      - { label: "PPSSPP (Standalone)", cmd: "PPSSPPQt %ROM%" }
+      - { label: "PPSSPP (Standalone)", cmd: "PPSSPPSDL %ROM%" }
       - { label: "PPSSPP (RetroArch)", cmd: "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/ppsspp_libretro.so %ROM%" }
     platform: psp
     theme: psp

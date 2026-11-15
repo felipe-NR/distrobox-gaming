@@ -7,6 +7,14 @@
 dg_nvidia_enabled: true
 dg_nvidia_icd: /usr/share/vulkan/icd.d/nvidia_icd.json
 
+# Box Vulkan/GL driver packages installed with dg_pacman_packages. Without an
+# NVIDIA bind-mount the box needs Mesa's RADV driver (64- and 32-bit) named
+# explicitly: otherwise pacman resolves steam's `vulkan-driver` dependency to
+# nvidia-utils and an AMD host gets no working Vulkan ICD.
+dg_gpu_packages: >-
+  {{ [] if dg_nvidia_enabled | bool else
+     ['vulkan-radeon', 'lib32-vulkan-radeon', 'lib32-mesa'] }}
+
 # Distrobox --nvidia can bind host 64-bit NVIDIA libraries over /usr/lib32.
 # Keep a matching extracted lib32-nvidia-utils package in user-owned storage
 # and expose it through Steam Runtime's LD_LIBRARY_PATH intake. The

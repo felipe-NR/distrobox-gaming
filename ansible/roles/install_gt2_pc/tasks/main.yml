@@ -34,6 +34,7 @@
   ansible.builtin.command:
     argv:
       - distrobox-enter
+      - --no-workdir
       - -n
       - "{{ dg_box_name }}"
       - --
@@ -90,6 +91,7 @@
   ansible.builtin.command:
     argv:
       - distrobox-enter
+      - --no-workdir
       - -n
       - "{{ dg_box_name }}"
       - --
@@ -111,6 +113,7 @@
   ansible.builtin.command:
     argv:
       - distrobox-enter
+      - --no-workdir
       - -n
       - "{{ dg_box_name }}"
       - --
@@ -156,7 +159,7 @@
 # pad onto the game's own keyboard controls with AntiMicroX (XWayland target).
 - name: Install the pad-to-keyword bridge package
   ansible.builtin.command:
-    argv: "{{ ['distrobox-enter', '-n', dg_box_name, '--', 'sudo', 'pacman', '-S', '--noconfirm', '--needed'] + ['antimicrox'] }}"
+    argv: "{{ ['distrobox-enter', '--no-workdir', '-n', dg_box_name, '--', 'sudo', 'pacman', '-S', '--noconfirm', '--needed'] + ['antimicrox'] }}"
   register: _gt2_bridge_pkg
   changed_when: "'nothing to do' not in _gt2_bridge_pkg.stdout"
   when: dg_gt2_pad_bridge | bool

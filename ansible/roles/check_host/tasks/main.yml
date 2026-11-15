@@ -34,6 +34,10 @@
       `newgrp docker` for the current shell). Also make sure the daemon is
       running: `sudo systemctl start containerd docker`.
 
+- name: Check the NVIDIA container runtime
+  ansible.builtin.include_tasks: nvidia-runtime.yml
+  when: dg_nvidia_enabled | bool
+
 - name: Verify box root is writable
   ansible.builtin.file:
     path: "{{ dg_box_root }}"
@@ -51,6 +55,15 @@
   ansible.builtin.file:
     path: "{{ _write_test.path }}"
     state: absent
+
+# ROMS_FINAL/PC/releases is the shared download cache that most pinned
+# installers (RPCS3, xemu, recomp AppImages, ...) get_url into. It exists on
+# a populated NAS; a from-scratch storage root has to get it here.
+- name: Ensure the shared release download cache exists
+  ansible.builtin.file:
+    path: "{{ dg_roms_final_root }}/PC/releases"
+    state: directory
+    mode: "0755"
 
 - name: Check host desktop entry directory
   ansible.builtin.stat:

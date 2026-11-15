@@ -1,7 +1,7 @@
 ---
 - name: Install Midas runtime packages in the box
   ansible.builtin.command:
-    argv: "{{ ['distrobox-enter', '-n', dg_box_name, '--', 'sudo', 'pacman', '-S', '--noconfirm', '--needed'] + dg_midas_packages }}"
+    argv: "{{ ['distrobox-enter', '--no-workdir', '-n', dg_box_name, '--', 'sudo', 'pacman', '-S', '--noconfirm', '--needed'] + dg_midas_packages }}"
   register: _midas_box_packages
   changed_when: "'nothing to do' not in _midas_box_packages.stdout"
 
@@ -41,6 +41,7 @@
   ansible.builtin.command:
     argv:
       - distrobox-enter
+      - --no-workdir
       - -n
       - "{{ dg_box_name }}"
       - --
