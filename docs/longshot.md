@@ -124,6 +124,40 @@ frame generation and Reflex, add them to `dg_longshot_dlss_options` in
 With `dg_nvidia_enabled` the launcher sets `VK_ICD_FILENAMES` to the NVIDIA
 Vulkan ICD, so the game sees only the NVIDIA card.
 
+### HDR (Hyprland)
+
+The game presents a native HDR10 swapchain (Wayland window, no gamescope). The
+log confirms it with `present: ... format 64 ... HDR10 swapchain yes: the
+game's PQ picture (Native)`. For the display to receive an HDR signal,
+Hyprland needs two settings outside this repo:
+
+- `render.cm_auto_hdr = 1` (in `~/.config/hypr/looknfeel.lua` on Omarchy).
+  Omarchy's default is `0`, which keeps the output in sRGB and tone-maps the
+  game's HDR down to SDR, so the TV never switches. With `1` the output moves
+  to HDR while a fullscreen window presents HDR and back to SDR when it leaves.
+- `bitdepth = 10` on the display's `hl.monitor` rule (`monitors.lua`).
+  Without it the output stays `XRGB8888` and Hyprland warns that HDR is not
+  running at 10 bit. Check with `hyprctl monitors`: `currentFormat` should read
+  `XBGR2101010`.
+
+The HDR rows live in `longshot_options.ini`, which `longshot-settings` backs
+up; the role does not seed them because they depend on the display. Match
+*HDR Peak Brightness* to the display's peak, read from its EDID with
+`edid-decode /sys/class/drm/card*-<output>/edid` (*Maximum luminance*). Values
+used on a Hisense 4K TV whose EDID reports ~750 nits peak with local dimming:
+
+| Key | Value | Menu |
+|-|-|-|
+| `hdr` | `2` | Native (the game's own HDR) |
+| `hdr_paper_white` | `150` | 150 nits; 200 in a bright room |
+| `hdr_peak_brightness` | `800` | The menu's nearest step above ~750; drop to 700 if bright highlights clip |
+| `hdr_contrast` | `100` | |
+| `hdr_tone_mapper` | `1` | PsychoV35 |
+
+On the TV: Game picture mode, local dimming high, and the TV's own dynamic
+tone mapping off, since the game already maps to the peak set above. Keep
+V-Sync on or Auto: the output runs at 60 Hz without VRR, and Off tears.
+
 ## Gamepad
 
 Native SDL input: the 8BitDo (and any Xbox, DualSense or Switch Pro pad) works
