@@ -257,3 +257,8 @@
 # game folder. See docs/hookshot.md.
 # dg_hookshot_dlss: true
 # dg_hookshot_nvidia_license_accepted: true
+
+# Longshot (Hookshot's successor) with NVIDIA DLSS / DLAA (RTX only). Same
+# license rule as Hookshot; never share the built game folder. See docs/longshot.md.
+# dg_longshot_dlss: true
+# dg_longshot_nvidia_license_accepted: true

@@ -1,0 +1,48 @@
+#!/usr/bin/env sh
+set -eu
+# Longshot launcher (Ocarina of Time, Switch 2 static recomp). Managed by
+# install_longshot. Starts the built bin/longshot the way the builder's
+# --play does (builder/linux/longshot-launch): from the game folder, without
+# the AppImage's libraries, update check off. The folder's own `longshot`
+# launcher is not used because it self-updates past the pinned
+# {{ dg_longshot_release_tag }}. Gamepad: native SDL (8BitDo works as an Xbox pad).
+
+GAME="{{ dg_longshot_game_dir }}"
+if [ ! -x "$GAME/bin/longshot" ] || [ ! -f "$GAME/image.bin" ]; then
+  printf '%s\n' "ERROR: Longshot is not built yet ($GAME)." >&2
+  printf '%s\n' "Put your dump at {{ dg_longshot_nup }}, then run:" >&2
+  printf '%s\n' "  cd {{ dg_project_root }}/ansible && ansible-playbook install-longshot.yml" >&2
+  exit 1
+fi
+
+unset LD_LIBRARY_PATH
+for name in $(env | awk -F= '$1 ~ /^(LONGSHOT_|PYTHON|APPDIR|APPIMAGE|ARGV0|OWD)/ { print $1 }'); do
+  unset "$name"
+done
+export LONGSHOT_NO_UPDATE_CHECK=1
+export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+# The box has its own network namespace, so udev's hotplug broadcasts never
+# reach it: SDL would only see pads present at launch. Without udev SDL
+# watches /dev/input with inotify, which follows the host's bind-mounted nodes.
+export SDL_JOYSTICK_DISABLE_UDEV=1
+{% if dg_gpu_env | trim %}
+# Discrete-GPU pin (NVIDIA box).
+export VK_ICD_FILENAMES="${VK_ICD_FILENAMES:-{{ dg_nvidia_icd }}}"
+{% endif %}
+
+cd "$GAME"
+# The game writes logs/longshot_log.txt itself only when it has no usable
+# stderr; started from the menu its stderr is distrobox's pipe and the log is
+# lost. Keep the same file and rotation (.1 = last run ... .4) unless stderr
+# is a terminal.
+if [ ! -t 2 ]; then
+  mkdir -p logs
+  for k in 4 3 2; do
+    if [ -f "logs/longshot_log.$((k - 1)).txt" ]; then
+      mv -f "logs/longshot_log.$((k - 1)).txt" "logs/longshot_log.$k.txt"
+    fi
+  done
+  if [ -f logs/longshot_log.txt ]; then mv -f logs/longshot_log.txt logs/longshot_log.1.txt; fi
+  exec >logs/longshot_log.txt 2>&1
+fi
+exec ./bin/longshot "$@"

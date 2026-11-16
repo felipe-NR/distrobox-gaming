@@ -231,6 +231,9 @@ dg_save_sets:
   - { name: sm64ds-port,          src: "Games/sm64ds-port/save" }          # SM64 DS port cartridge save + save states (re-extracted gamedir on rebuild)
   - { name: wwhd-recomp,          src: "tools/wwhd-recomp/data/save" }     # Wind Waker HD recomp saves + Picto Box pics (game rebuilt from dump on rebuild)
   - { name: hookshot,             src: [".local/share/hookshot", "file:Games/Hookshot/hookshot_options.ini"] }  # Hookshot (OoT Switch 2 recomp) saves + menu options/controls (game rebuilt from dump on rebuild)
+  - { name: longshot,             src: ".local/share/longshot/save" }  # Longshot (OoT Switch 2 recomp, Hookshot successor) saves; only save/: launcher/ + builder/ beside it are tool data
+  - { name: longshot-settings,    src: ["file:Games/Longshot/longshot_options.ini", "file:Games/Longshot/longshot_env.txt"] }  # Longshot menu options/controls + env switches (game rebuilt from dump on rebuild)
+  - { name: longshot-mods,        src: "Games/Longshot/mods" }  # Longshot mods folder
   - { name: mp4-recomp,           src: [".local/share/MetroidPrime4Recomp/Metroid Prime 4 Beyond_data/save",
                                         "file:.local/share/MetroidPrime4Recomp/Metroid Prime 4 Beyond.ini"] }  # MP4 Beyond recomp saves + settings (game rebuilt from dump on rebuild)
   # Virtua Fighter recomp runs portable: EEPROM, NVRAM and ranking names sit

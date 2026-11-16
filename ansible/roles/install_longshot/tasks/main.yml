@@ -1,0 +1,305 @@
+---
+# Longshot: native Switch 2 Ocarina of Time recomp (Hookshot's successor),
+# built from the user's dump. Its own role: Hookshot's files are never touched
+# here, except that its saves may be copied (never moved) on the first run.
+# See group_vars/all/longshot.yml and docs/longshot.md.
+
+- name: Revert Longshot when requested
+  when: dg_longshot_revert | bool
+  block:
+    - name: Remove the Longshot launcher, builder, game folder + desktop entry (registered saves kept)
+      ansible.builtin.include_role:
+        name: revert_guard
+      vars:
+        revert_paths:
+          - "{{ dg_longshot_launcher }}"
+          - "{{ dg_longshot_root }}"
+          - "{{ dg_longshot_game_dir }}"
+          - "{{ dg_desktop_render_dir }}/gaming-longshot.desktop"
+    - name: Refresh host launchers after removing Longshot
+      ansible.builtin.command:
+        cmd: "{{ dg_project_root }}/scripts/install-host-launchers.sh"
+      environment:
+        DG_DESKTOP_RENDER_DIR: "{{ dg_desktop_render_dir }}"
+        DG_HOST_APPLICATIONS_DIR: "{{ dg_host_applications_dir }}"
+      changed_when: true
+    - name: Report Longshot reverted
+      ansible.builtin.debug:
+        msg: >-
+          Longshot removed. Saves in {{ dg_box_home }}/{{ dg_longshot_save_rel }}
+          and your dump are untouched.
+
+- name: Install Longshot
+  when: not (dg_longshot_revert | bool)
+  block:
+    - name: Create Longshot directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ dg_longshot_archive | dirname }}"
+        - "{{ dg_longshot_builder_dir }}"
+        - "{{ dg_longshot_builder_home }}"
+        - "{{ dg_box_home }}/bin"
+
+    - name: Download the pinned Longshot AppImage
+      ansible.builtin.get_url:
+        url: "{{ dg_longshot_asset_url }}"
+        dest: "{{ dg_longshot_archive }}"
+        checksum: "sha256:{{ dg_longshot_asset_sha256 }}"
+        mode: "0755"
+
+    - name: Name our source patches (+p<hash of their text>, empty without any)
+      ansible.builtin.set_fact:
+        _longshot_patch_ref: >-
+          {{ ('+p' ~ (query('file', *(dg_longshot_source_patches
+                                     | map('regex_replace', '^', role_path ~ '/files/') | list))
+                      | join('\n') | hash('sha1'))[:12])
+             if dg_longshot_source_patches | length > 0 else '' }}
+
+    - name: Extract the AppImage (gated on the release and our patches; the restricted box has no FUSE)
+      # AppRun works unpacked: without $APPIMAGE it names itself as the
+      # builder, and --cli runs nx2/make_game.py with the bundled Python.
+      ansible.builtin.shell: |
+        set -eu
+        cd "{{ dg_longshot_builder_dir }}"
+        if grep -qx "{{ dg_longshot_release_tag }}{{ _longshot_patch_ref }}" .dg-installed-ref 2>/dev/null && [ -x squashfs-root/AppRun ]; then
+          exit 0
+        fi
+        rm -rf squashfs-root
+        "{{ dg_longshot_archive }}" --appimage-extract >/dev/null
+        echo longshot-extracted
+      register: _longshot_extract
+      changed_when: "'longshot-extracted' in _longshot_extract.stdout"
+
+    - name: Patch the builder's bundled source
+      # Already applied (a rerun on the same extraction): the reverse dry run
+      # succeeds and the patch is skipped. Neither direction applying means
+      # the release changed under the patch: fail rather than build without it.
+      ansible.builtin.shell: |
+        set -eu
+        cd "{{ dg_longshot_builder_dir }}/squashfs-root/usr/share/longshot"
+        p="{{ role_path }}/files/{{ item }}"
+        if patch -p1 -R --dry-run --force -s < "$p" >/dev/null 2>&1; then
+          exit 0
+        fi
+        if ! patch -p1 --dry-run --forward -s < "$p" >/dev/null 2>&1; then
+          echo "{{ item }} does not apply to Longshot {{ dg_longshot_release_tag }}; rebase or drop it (dg_longshot_source_patches)" >&2
+          exit 1
+        fi
+        patch -p1 --forward -s < "$p"
+        echo longshot-patched
+      loop: "{{ dg_longshot_source_patches }}"
+      register: _longshot_patch
+      changed_when: "'longshot-patched' in _longshot_patch.stdout"
+
+    - name: Record the extracted release and patches (only once every patch is in)
+      ansible.builtin.copy:
+        dest: "{{ dg_longshot_builder_dir }}/.dg-installed-ref"
+        content: "{{ dg_longshot_release_tag }}{{ _longshot_patch_ref }}\n"
+        mode: "0644"
+
+    - name: Copy Hookshot's saves into Longshot (once, while Longshot has none)
+      # Longshot reads the same save files. cp -a into a folder that does not
+      # exist yet: an existing Longshot save is never replaced, and Hookshot's
+      # folder is only read.
+      ansible.builtin.shell: |
+        set -eu
+        src="{{ dg_box_home }}/{{ dg_longshot_hookshot_save_rel }}"
+        dst="{{ dg_box_home }}/{{ dg_longshot_save_rel }}"
+        if [ -e "$dst" ] || [ ! -d "$src" ]; then
+          exit 0
+        fi
+        mkdir -p "$(dirname "$dst")"
+        cp -a "$src" "$dst"
+        echo longshot-saves-copied
+      register: _longshot_save_copy
+      changed_when: "'longshot-saves-copied' in _longshot_save_copy.stdout"
+      when: dg_longshot_import_hookshot_saves | bool
+
+    - name: Require NVIDIA's license for a DLSS build
+      ansible.builtin.assert:
+        that: dg_longshot_nvidia_license_accepted | bool
+        fail_msg: >-
+          dg_longshot_dlss needs dg_longshot_nvidia_license_accepted=true, which
+          accepts the NVIDIA RTX SDKs license (see group_vars/all/longshot.yml).
+      when: dg_longshot_dlss | bool
+
+    - name: Name this build (release, +dlss with NVIDIA's SDK, +p<hash> with our patches)
+      ansible.builtin.set_fact:
+        _longshot_build_ref: >-
+          {{ dg_longshot_release_tag }}{{ '+dlss' if dg_longshot_dlss | bool else '' }}{{ _longshot_patch_ref }}
+
+    - name: Look for the dump (.nup, or romfs + exefs)
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        get_checksum: false  # the .nup is ~25 GB; a SHA1 of it takes minutes
+      loop:
+        - "{{ dg_longshot_nup }}"
+        - "{{ dg_longshot_dump_dir }}/romfs"
+        - "{{ dg_longshot_dump_dir }}/exefs"
+      register: _longshot_dump
+
+    - name: Choose the builder's game arguments
+      ansible.builtin.set_fact:
+        _longshot_game_argv: >-
+          {{ ['--nup', dg_longshot_nup]
+             if _longshot_dump.results[0].stat.exists else
+             ['--romfs', dg_longshot_dump_dir ~ '/romfs', '--exefs', dg_longshot_dump_dir ~ '/exefs']
+             if (_longshot_dump.results[1].stat.isdir | default(false)) and
+                (_longshot_dump.results[2].stat.isdir | default(false)) else [] }}
+
+    - name: Report the missing dump
+      ansible.builtin.debug:
+        msg: >-
+          No Ocarina of Time (Switch 2) dump found. Put your .nup at
+          {{ dg_longshot_nup }} (or romfs/ + exefs/ in {{ dg_longshot_dump_dir }})
+          and rerun install-longshot.yml. The builder is installed; the game is
+          not built yet.
+      when: _longshot_game_argv | length == 0
+
+    # The script reaches the dump paths as "$@" rather than spliced into
+    # sh -c: the dump folder has spaces. --check runs inside it too, because
+    # AppRun's first --cli downloads the build tools into LONGSHOT_BUILDER_HOME.
+    - name: Check the dump is the supported version (build e0f3ccfa)
+      ansible.builtin.command:
+        argv: "{{ (dg_in_box | split) + ['sh', '-c', _longshot_check_script, 'longshot-check'] + _longshot_game_argv }}"
+      vars:
+        _longshot_check_script: |
+          set -eu
+          export LONGSHOT_BUILDER_HOME="{{ dg_longshot_builder_home }}"
+          exec "{{ dg_longshot_apprun }}" --cli --check "$@"
+      changed_when: false
+      when: _longshot_game_argv | length > 0
+
+    - name: Build the game from the dump (15 to 45 minutes; skipped when this release is built)
+      ansible.builtin.command:
+        argv: "{{ (dg_in_box | split) + ['sh', '-c', _longshot_build_script, 'longshot-build'] + _longshot_game_argv }}"
+      vars:
+        _longshot_build_script: |
+          set -eu
+          ref="{{ dg_longshot_game_dir }}/.dg-built-ref"
+          if [ -x "{{ dg_longshot_game_bin }}" ] && grep -qx "{{ _longshot_build_ref }}" "$ref" 2>/dev/null; then
+            echo longshot-build-current
+            exit 0
+          fi
+          export LONGSHOT_BUILDER_HOME="{{ dg_longshot_builder_home }}"
+          {% if dg_longshot_dlss | bool %}
+          export LONGSHOT_NGX_SDK="{{ dg_longshot_ngx_sdk_dir }}"
+          set -- "$@" --fetch-ngx-sdk --accept-nvidia-license
+          {% else %}
+          unset LONGSHOT_NGX_SDK
+          {% endif %}
+          "{{ dg_longshot_apprun }}" --cli "$@" \
+            --out "{{ dg_longshot_game_dir }}" \
+            --language "{{ dg_longshot_language }}" \
+            --jobs "{{ dg_longshot_build_jobs }}"
+          printf "%s\n" "{{ _longshot_build_ref }}" > "$ref"
+          echo longshot-built
+      register: _longshot_build
+      changed_when: "'longshot-built' in _longshot_build.stdout"
+      when: _longshot_game_argv | length > 0
+
+    - name: Seed the Longshot options (missing keys only)
+      when: _longshot_game_argv | length > 0
+      block:
+        - name: Create longshot_options.ini when absent
+          ansible.builtin.copy:
+            dest: "{{ dg_longshot_options }}"
+            content: ''
+            force: false
+            mode: "0644"
+
+        - name: Read existing Longshot options
+          ansible.builtin.slurp:
+            src: "{{ dg_longshot_options }}"
+          register: _longshot_saved_options
+
+        # The build's shader-preparation run starts the game headless, and it
+        # writes a full options file with its own Auto choices (quality_preset=6,
+        # a 2560x1440 output with no display to read, windowed). So "missing keys
+        # only" would never apply: the first run after the role's first build
+        # sets the defaults over that file, and the marker keeps later runs to
+        # missing keys so menu changes survive.
+        - name: Look for the options-seeded marker
+          ansible.builtin.stat:
+            path: "{{ dg_longshot_game_dir }}/.dg-options-seeded"
+          register: _longshot_seeded
+
+        - name: Set the graphics and controller defaults (first run) or seed missing ones
+          ansible.builtin.lineinfile:
+            path: "{{ dg_longshot_options }}"
+            regexp: "^{{ item.key }}="
+            line: "{{ item.key }}={{ item.value }}"
+            backup: true
+            mode: "0644"
+          loop: "{{ dg_longshot_options_defaults | dict2items }}"
+          loop_control:
+            label: "{{ item.key }}={{ item.value }}"
+          when: >-
+            not _longshot_seeded.stat.exists or
+            not ((_longshot_saved_options.content | b64decode) is search('(?m)^' ~ item.key ~ '='))
+
+        - name: Mark the defaults as set
+          ansible.builtin.copy:
+            dest: "{{ dg_longshot_game_dir }}/.dg-options-seeded"
+            content: "{{ _longshot_build_ref }}\n"
+            force: false
+            mode: "0644"
+
+        - name: Turn on DLSS after a DLSS build
+          ansible.builtin.lineinfile:
+            path: "{{ dg_longshot_options }}"
+            regexp: "^{{ item.key }}="
+            line: "{{ item.key }}={{ item.value }}"
+            backup: true
+            mode: "0644"
+          loop: "{{ dg_longshot_dlss_options | dict2items }}"
+          loop_control:
+            label: "{{ item.key }}={{ item.value }}"
+          when: dg_longshot_dlss | bool and _longshot_build is changed
+
+        - name: Hold the graphics floor on every run (dg_longshot_options_enforced)
+          ansible.builtin.lineinfile:
+            path: "{{ dg_longshot_options }}"
+            regexp: "^{{ item.key }}="
+            line: "{{ item.key }}={{ item.value }}"
+            backup: true
+            mode: "0644"
+          loop: "{{ dg_longshot_options_enforced | dict2items }}"
+          loop_control:
+            label: "{{ item.key }}={{ item.value }}"
+
+    - name: Deploy the Longshot launcher
+      ansible.builtin.template:
+        src: longshot.sh.j2
+        dest: "{{ dg_longshot_launcher }}"
+        mode: "0755"
+
+    - name: Render the Longshot desktop entry
+      ansible.builtin.template:
+        src: gaming-longshot.desktop.j2
+        dest: "{{ dg_desktop_render_dir }}/gaming-longshot.desktop"
+        mode: "0644"
+
+    - name: Install the desktop entry into the host applications dir
+      ansible.builtin.command:
+        cmd: "{{ dg_project_root }}/scripts/install-host-launchers.sh"
+      environment:
+        DG_DESKTOP_RENDER_DIR: "{{ dg_desktop_render_dir }}"
+        DG_HOST_APPLICATIONS_DIR: "{{ dg_host_applications_dir }}"
+      register: _longshot_host_launchers
+      changed_when: >-
+        'installed ' in _longshot_host_launchers.stdout or
+        'removed stale ' in _longshot_host_launchers.stdout
+
+    - name: Report
+      ansible.builtin.debug:
+        msg: >-
+          Longshot {{ dg_longshot_release_tag }}: builder in {{ dg_longshot_builder_dir }},
+          game in {{ dg_longshot_game_dir }}
+          ({{ 'built' if _longshot_game_argv | length > 0 else 'NOT built: no dump yet' }}),
+          launcher {{ dg_longshot_launcher }}, saves in {{ dg_box_home }}/{{ dg_longshot_save_rel }}
+          {{- ' (copied from Hookshot this run)' if _longshot_save_copy is changed else '' }}.
+          Revert: -e dg_longshot_revert=true.
