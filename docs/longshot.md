@@ -62,7 +62,12 @@ untouched).
 - `AppRun --cli --check` verifies the dump, then
   `AppRun --cli --nup <dump> --out ~/Games/Longshot --language pt-BR` builds it
   (about 15 minutes on 12 cores). The build is skipped while `.dg-built-ref` in
-  the game folder matches the pinned tag, so a release bump rebuilds once.
+  the game folder matches the pinned tag, `+dlss` and the hash of our source
+  patches, so a release bump or a patch change rebuilds once.
+- Before the build the role applies `dg_longshot_source_patches` (role
+  `files/`) to the builder's bundled source with `patch -p1`. A tag bump that
+  no longer takes a patch fails the play: check whether upstream fixed the bug,
+  then drop or rebase the patch. See *Crash: swapchain rebuild on NVIDIA*.
 - The launcher starts `bin/longshot` from the game folder the way the builder's
   `--play` does: without `LD_LIBRARY_PATH` and the AppImage's `LONGSHOT_*`
   variables, with `LONGSHOT_NO_UPDATE_CHECK=1`. The game folder's own
@@ -152,3 +157,32 @@ The game writes that file itself only when it has no usable stderr. Started
 from the menu, its stderr is distrobox's pipe, so the launcher redirects stderr
 there and rotates the older runs the same way. Started from a terminal, the
 game prints there instead.
+
+## Crash: swapchain rebuild on NVIDIA
+
+Seen once on v3.0.0-rc.4 with driver 615.78.08 (RTX 4060), right after the
+Insert menu's *Restart now*, as the title screen's frame interpolation came
+up: `CRASH: exception 0xc0000005 ... libnvidia-glcore.so.615.78.08+0xe1f599`,
+straight after the log's `vk: swapchain ...` and `vk: NVIDIA Reflex: on +
+boost` lines.
+
+`bin/longshot_vk.so` is not stripped, so `addr2line -f -C -e
+bin/longshot_vk.so <offset>` names the game's frames:
+`replay_thread_main` → `submit_job` → `run_submit` →
+`memory_begin_submission`. That last one calls `vkGetSemaphoreCounterValue`
+on `sparse_tl`, the sparse mirrors' timeline. Inside the driver that call
+walks a table on the device and read an entry that had just been freed. The
+presenter thread was rebuilding the swapchain at that moment. That runs under
+`dev.present_mu`, and the replay thread's timeline reads do not take it, so
+the two calls ran in the driver at the same time.
+
+`longshot-swapchain-guard.patch` adds a `std::shared_mutex`: timeline counter
+reads (the `vkGetSemaphoreCounterValue` wrapper in `vk_work.h`) take it
+shared, and `vkCreateSwapchainKHR` and `vkDestroySwapchainKHR` in
+`vk_main.cpp` take it exclusively. Each side holds it across that one driver
+call only, so it cannot deadlock, and the replay thread waits only while a
+swapchain is being made. Not reported upstream yet.
+
+If it comes back, the workaround is NVIDIA Reflex Off and fewer swapchain
+rebuilds (Fullscreen, V-Sync, HDR and the Frame generation rows each rebuild
+it).

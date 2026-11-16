@@ -50,21 +50,55 @@
         checksum: "sha256:{{ dg_longshot_asset_sha256 }}"
         mode: "0755"
 
-    - name: Extract the AppImage (version-gated; the restricted box has no FUSE)
+    - name: Name our source patches (+p<hash of their text>, empty without any)
+      ansible.builtin.set_fact:
+        _longshot_patch_ref: >-
+          {{ ('+p' ~ (query('file', *(dg_longshot_source_patches
+                                     | map('regex_replace', '^', role_path ~ '/files/') | list))
+                      | join('\n') | hash('sha1'))[:12])
+             if dg_longshot_source_patches | length > 0 else '' }}
+
+    - name: Extract the AppImage (gated on the release and our patches; the restricted box has no FUSE)
       # AppRun works unpacked: without $APPIMAGE it names itself as the
       # builder, and --cli runs nx2/make_game.py with the bundled Python.
       ansible.builtin.shell: |
         set -eu
         cd "{{ dg_longshot_builder_dir }}"
-        if grep -qx "{{ dg_longshot_release_tag }}" .dg-installed-ref 2>/dev/null && [ -x squashfs-root/AppRun ]; then
+        if grep -qx "{{ dg_longshot_release_tag }}{{ _longshot_patch_ref }}" .dg-installed-ref 2>/dev/null && [ -x squashfs-root/AppRun ]; then
           exit 0
         fi
         rm -rf squashfs-root
         "{{ dg_longshot_archive }}" --appimage-extract >/dev/null
-        printf "%s\n" "{{ dg_longshot_release_tag }}" > .dg-installed-ref
         echo longshot-extracted
       register: _longshot_extract
       changed_when: "'longshot-extracted' in _longshot_extract.stdout"
+
+    - name: Patch the builder's bundled source
+      # Already applied (a rerun on the same extraction): the reverse dry run
+      # succeeds and the patch is skipped. Neither direction applying means
+      # the release changed under the patch: fail rather than build without it.
+      ansible.builtin.shell: |
+        set -eu
+        cd "{{ dg_longshot_builder_dir }}/squashfs-root/usr/share/longshot"
+        p="{{ role_path }}/files/{{ item }}"
+        if patch -p1 -R --dry-run --force -s < "$p" >/dev/null 2>&1; then
+          exit 0
+        fi
+        if ! patch -p1 --dry-run --forward -s < "$p" >/dev/null 2>&1; then
+          echo "{{ item }} does not apply to Longshot {{ dg_longshot_release_tag }}; rebase or drop it (dg_longshot_source_patches)" >&2
+          exit 1
+        fi
+        patch -p1 --forward -s < "$p"
+        echo longshot-patched
+      loop: "{{ dg_longshot_source_patches }}"
+      register: _longshot_patch
+      changed_when: "'longshot-patched' in _longshot_patch.stdout"
+
+    - name: Record the extracted release and patches (only once every patch is in)
+      ansible.builtin.copy:
+        dest: "{{ dg_longshot_builder_dir }}/.dg-installed-ref"
+        content: "{{ dg_longshot_release_tag }}{{ _longshot_patch_ref }}\n"
+        mode: "0644"
 
     - name: Copy Hookshot's saves into Longshot (once, while Longshot has none)
       # Longshot reads the same save files. cp -a into a folder that does not
@@ -92,9 +126,10 @@
           accepts the NVIDIA RTX SDKs license (see group_vars/all/longshot.yml).
       when: dg_longshot_dlss | bool
 
-    - name: Name this build (release, plus +dlss when built with NVIDIA's SDK)
+    - name: Name this build (release, +dlss with NVIDIA's SDK, +p<hash> with our patches)
       ansible.builtin.set_fact:
-        _longshot_build_ref: "{{ dg_longshot_release_tag }}{{ '+dlss' if dg_longshot_dlss | bool else '' }}"
+        _longshot_build_ref: >-
+          {{ dg_longshot_release_tag }}{{ '+dlss' if dg_longshot_dlss | bool else '' }}{{ _longshot_patch_ref }}
 
     - name: Look for the dump (.nup, or romfs + exefs)
       ansible.builtin.stat:

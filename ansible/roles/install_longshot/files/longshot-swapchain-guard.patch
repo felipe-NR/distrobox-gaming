@@ -1,0 +1,124 @@
+diff --git a/gpu/vk/vk_internal.h b/gpu/vk/vk_internal.h
+index 7b8a9271..8b9bc638 100644
+--- a/gpu/vk/vk_internal.h
++++ b/gpu/vk/vk_internal.h
+@@ -5,6 +5,7 @@
+ #include <array>
+ #include <atomic>
+ #include <mutex>
++#include <shared_mutex>
+ #include <string>
+ #include <vector>
+ 
+@@ -40,6 +41,12 @@ void queue_flush();          // (the same, taking dev.present_mu)
+ // (longshot) held submits out, then vkDeviceWaitIdle with the present queue's lock taken too (dev.present_mu held): the device's
+ // every queue is synchronized by the host around it
+ void device_wait_idle_locked();
++/// (distrobox-gaming patch) NVIDIA 615.x walks a device-wide table inside vkGetSemaphoreCounterValue that
++/// vkCreateSwapchainKHR and vkDestroySwapchainKHR change: the replay thread's timeline query read a freed entry
++/// while the presenter remade the swapchain (SIGSEGV at libnvidia-glcore +0xe1f599). Counter reads take this
++/// shared (vk_work.h), swapchain create and destroy take it exclusively (vk_main.cpp). Both hold it only across
++/// the one driver call and take no other lock inside it.
++inline std::shared_mutex swapchain_driver_mu;
+ 
+ struct Device {
+     VkInstance instance = VK_NULL_HANDLE;
+diff --git a/gpu/vk/vk_main.cpp b/gpu/vk/vk_main.cpp
+index 03d208bd..3ae75cf2 100644
+--- a/gpu/vk/vk_main.cpp
++++ b/gpu/vk/vk_main.cpp
+@@ -755,13 +755,19 @@ int swapchain_framegen() { return opts.framegen >= 2 ? std::min(opts.framegen, 4
+ /// to 8x: swapchain_framegen stops at 4, for the images)
+ bool swapchain_dlssg() { return swapchain_framegen() >= 2 && dlss_fg_runs(opts.framegen - 1); }
+ 
++/// (distrobox-gaming patch) a swapchain destroyed with no timeline read in the driver meanwhile (vk_internal.h)
++static void destroy_swapchain_guarded(VkSwapchainKHR sc) {
++    std::unique_lock lk(swapchain_driver_mu);
++    vkDestroySwapchainKHR(dev.device, sc, nullptr);
++}
++
+ void retire_swapchain() {
+     if (!dev.swapchain) return;
+     device_wait_idle_locked();
+     reflex_swapchain_destroyed();
+     swap_views_drop();
+     for (auto semaphore : dev.swap_rendered) vkDestroySemaphore(dev.device, semaphore, nullptr);
+-    vkDestroySwapchainKHR(dev.device, dev.swapchain, nullptr);
++    destroy_swapchain_guarded(dev.swapchain);
+     dev.swapchain = VK_NULL_HANDLE;
+     ++dev.swapchain_generation;
+     dev.swap_rendered.clear();
+@@ -953,7 +959,10 @@ bool create_swapchain(uint32_t width, uint32_t height) {
+     }
+     reflex_swapchain_info(ci);   // (NVIDIA Reflex: latency mode on)
+     VkSwapchainKHR sc;
+-    result = vkCreateSwapchainKHR(dev.device, &ci, nullptr, &sc);
++    {
++        std::unique_lock lk(swapchain_driver_mu);   // (distrobox-gaming patch: vk_internal.h)
++        result = vkCreateSwapchainKHR(dev.device, &ci, nullptr, &sc);
++    }
+     // Passing oldSwapchain retires it even when creation fails. Nothing may acquire from it again.
+     retire_swapchain();
+     if (invalidate_lost_surface(result)) return false;
+@@ -963,12 +972,12 @@ bool create_swapchain(uint32_t width, uint32_t height) {
+         return false;
+     }
+     if (vkGetSwapchainImagesKHR(dev.device, sc, &n, nullptr) != VK_SUCCESS || !n) {
+-        vkDestroySwapchainKHR(dev.device, sc, nullptr);
++        destroy_swapchain_guarded(sc);
+         return false;
+     }
+     std::vector<VkImage> images(n);
+     if (vkGetSwapchainImagesKHR(dev.device, sc, &n, images.data()) != VK_SUCCESS || !n) {
+-        vkDestroySwapchainKHR(dev.device, sc, nullptr);
++        destroy_swapchain_guarded(sc);
+         return false;
+     }
+     images.resize(n);
+@@ -978,7 +987,7 @@ bool create_swapchain(uint32_t width, uint32_t height) {
+         if (vkCreateSemaphore(dev.device, &si, nullptr, &semaphore) != VK_SUCCESS) {
+             for (auto made : rendered)
+                 if (made) vkDestroySemaphore(dev.device, made, nullptr);
+-            vkDestroySwapchainKHR(dev.device, sc, nullptr);
++            destroy_swapchain_guarded(sc);
+             return false;
+         }
+     }
+diff --git a/gpu/vk/vk_work.h b/gpu/vk/vk_work.h
+index b6055b7f..dfd9d053 100644
+--- a/gpu/vk/vk_work.h
++++ b/gpu/vk/vk_work.h
+@@ -5,10 +5,12 @@
+ #pragma once
+ 
+ #include <atomic>
++#include <shared_mutex>
+ 
+ #include "vk_loader.h"
+ #include "vk_recorder.h"   // (RX_VK_RECORDER: each macro below calls its packer, which calls the driver directly when the recorder is off)
+ #include "gpu_wait_stats.h"
++#include "vk_internal.h"   // (swapchain_driver_mu)
+ 
+ namespace mkwvk {
+ extern std::atomic<uint64_t> work_epoch;   // (vk_texture.cpp)
+@@ -17,6 +19,11 @@ inline void note_work() {
+     // make the count equal the one a barrier was recorded at with work recorded since, and the next barrier is left out for it)
+     work_epoch.fetch_add(1, std::memory_order_relaxed);
+ }
++/// (distrobox-gaming patch) a timeline's value, never while a swapchain is made or destroyed (vk_internal.h)
++inline VkResult semaphore_counter_value(VkDevice d, VkSemaphore s, uint64_t* v) {
++    std::shared_lock lk(swapchain_driver_mu);
++    return ::vkx::vkGetSemaphoreCounterValue(d, s, v);
++}
+ } // namespace mkwvk
+ 
+ #define vkCmdPipelineBarrier2(...) (::mkwvk::note_work(), ::mkwvk::rec::rx_vkCmdPipelineBarrier2(__VA_ARGS__))
+@@ -105,7 +112,7 @@ inline void note_work() {
+ #define vkWaitForFences(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkWaitForFences), ::mkwvk::gpu_wait_stats::fences(::vkx::vkWaitForFences, __VA_ARGS__))
+ #define vkResetFences(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkResetFences), ::vkx::vkResetFences(__VA_ARGS__))
+ #define vkWaitSemaphores(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkWaitSemaphores), ::mkwvk::gpu_wait_stats::timeline(::vkx::vkWaitSemaphores, __VA_ARGS__))
+-#define vkGetSemaphoreCounterValue(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkGetSemaphoreCounterValue), ::vkx::vkGetSemaphoreCounterValue(__VA_ARGS__))
++#define vkGetSemaphoreCounterValue(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkGetSemaphoreCounterValue), ::mkwvk::semaphore_counter_value(__VA_ARGS__))
+ #define vkGetQueryPoolResults(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkGetQueryPoolResults), ::mkwvk::gpu_wait_stats::queries(::vkx::vkGetQueryPoolResults, VK_QUERY_RESULT_WAIT_BIT, __VA_ARGS__))
+ #define vkResetQueryPool(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkResetQueryPool), ::vkx::vkResetQueryPool(__VA_ARGS__))
+ #define vkGetQueueCheckpointDataNV(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkGetQueueCheckpointDataNV), ::vkx::vkGetQueueCheckpointDataNV(__VA_ARGS__))
