@@ -58,7 +58,9 @@ dg_save_sets:
   - { name: lichii-system-save,   src: "tools/lichii/profile/data/eden/nand/system/save" }
   - { name: cemu,                 src: ".local/share/Cemu" }
   - { name: shadps4-savedata,     src: ".local/share/shadPS4/home" }   # per-user <uid>/savedata lives under home/
-  - { name: supermodel-nvram,     src: ".supermodel/NVRAM" }
+  # Supermodel (Model 3) moved to the pinned release tree on 2026-11-18; the
+  # pre-0.4 ~/.supermodel NVRAM is migrated once into this location.
+  - { name: supermodel-nvram,     src: ["tools/supermodel/NVRAM", "tools/supermodel/Saves"] }
   - { name: dolphin-gba-saves,    src: ".local/share/dolphin-emu/GBA/Saves" }
   - { name: rpcs3-savedata,       src: ".config/rpcs3/dev_hdd0/savedata" }
   - { name: kytyps5-savedata,     src: "tools/kytyps5/user/_SaveData" }
@@ -98,7 +100,8 @@ dg_save_sets:
                                         "file:.local/share/OutRunners/ghost_8.bin",
                                         "file:.local/share/OutRunners/ghost_9.bin"] }
   - { name: gravity-rush,        src: ".local/share/gravity-rush" }
-  - { name: doa2u-re,            src: ".local/share/doa2u-re" }
+  - { name: doa2u-re,            src: ["tools/doa2u/current/private/play-disc/.recomp-storage/partition1",
+                                        "tools/doa2u/current/private/play-disc/.recomp-storage/save-undo-v1"] }  # Xbox UDATA/TDATA saves + undo state (current -> release)
   - { name: gt3-revisited,        src: ".local/share/GT3Revisited" }
   - { name: gt2-pc-port,          src: ".local/share/gt2-pc" }
   - { name: unleashed-recomp,     src: ".config/UnleashedRecomp" }
@@ -197,6 +200,9 @@ dg_save_sets:
   - { name: rea-colin-mcrae,     src: ["Games/rea-colin-mcrae/saves",
                                        "file:Games/rea-colin-mcrae/previous-cmRally.cfg",
                                        "file:wineprefixes/rea-colin-mcrae/drive_c/users/{{ ansible_facts['user_id'] }}/AppData/Local/CMRLauncher/launcher.cfg"] }
+  # Native Rust reconstruction: back up only the save/ directory (cmRally.cfg,
+  # modern.cfg, championship slots), not the imported runtime-data or HD pack.
+  - { name: rea-colin-mcrae-recomp, src: "tools/rea-colin-mcrae-recomp/runtime-data/installed-eu-derived-assets-v2/save" }
   - { name: sega-rally-2,        src: ["file:Games/pc-racing/sega-rally-2/SR2_SAVE.DAT",
                                         "file:Games/pc-racing/sega-rally-2/SR2.CFG",
                                         "file:Games/pc-racing/sega-rally-2/SR2.DSP"] }
@@ -226,7 +232,36 @@ dg_save_sets:
   - { name: sorr-save,            src: "tools/sorr/game/savegame" }
   - { name: midnightclub-la,      src: "tools/midnightclubla/midnightclubla/user-data" }
   - { name: roadrash64-recomp,    src: ".config/RoadRash64Recompiled" }
-  - { name: fzero-recomp,         src: "tools/fzero-snes-recomp/saves" }   # SRAM + save states (cwd-relative, next to the AppImage)
+  # Daytona USA 2 Web: the cabinet NVRAM/EEPROM in the browser profile. The
+  # rest of that profile is Chromium's own component cache, not save data.
+  - { name: daytona2-web,        src: [".local/share/daytona2-web/profile/Default/IndexedDB",
+                                        ".local/share/daytona2-web/profile/Default/Local Storage"] }
+  - { name: redline-recomp,      src: ["tools/redline/hdd/Partition1/UDATA",
+                                        "file:tools/redline/build/recomp.ini"] }  # Forza saves + Redline settings
+  - { name: rea-sega,            src: ["file:.local/share/rea-sega/launcher.cfg",
+                                        ".local/share/rea-sega/settings",
+                                        ".local/share/rea-sega/runtimes"] }  # library/BIOS config, per-game settings and saves (Wine prefix excluded)
+  - { name: rea-nintendo,        src: ["file:.local/share/rea-nintendo/launcher.cfg",
+                                        ".local/share/rea-nintendo/settings",
+                                        ".local/share/rea-nintendo/runtimes"] }  # library config, per-game settings and saves (Wine prefix excluded)
+  - { name: mvc2,                src: ["file:tools/mvc2/mvc2.cfg",
+                                        "file:tools/mvc2/eeprom.bin",
+                                        "file:tools/mvc2/backup.bin",
+                                        "file:tools/mvc2/vmu_save_A1.bin"] }  # settings, NAOMI EEPROM/bookkeeping and Dreamcast VMU
+  - { name: rea-wangan,          src: ["file:.local/share/rea-wangan/launcher.cfg",
+                                        ".local/share/rea-wangan/settings",
+                                        ".local/share/rea-wangan/runtimes"] }  # library config, per-game settings and saves (Wine prefix excluded)
+  - { name: rea-initiald,        src: ["file:.local/share/rea-initiald/launcher.cfg",
+                                        ".local/share/rea-initiald/settings",
+                                        ".local/share/rea-initiald/runtimes"] }  # library config, per-game settings and saves (WAL prefix excluded)
+  - { name: rondo-recomp,         src: "tools/rondo-recomp/user" }  # settings.ini, BRAM saves and save states (portable user folder)
+  - { name: super-hang-on-ultimate, src: ["file:tools/super-hang-on-ultimate/shangon.ini",
+                                        "file:tools/super-hang-on-ultimate/shangon.nv",
+                                        "file:tools/super-hang-on-ultimate/shangon_original.sav",
+                                        "file:tools/super-hang-on-ultimate/shangon_original_md.sav"] }  # settings, arcade EEPROM/high scores and Original Mode saves
+  - { name: fzero-recomp,         src: ["tools/fzero-snes-recomp/saves",
+                                        "file:tools/fzero-snes-recomp/config.ini",
+                                        "file:tools/fzero-snes-recomp/fzero-video.ini"] }  # SRAM + save states + display/mod settings (native build)
   - { name: sonic-fallen-star,    src: "Games/sonic-fallen-star/Sonic and the Fallen Star (V1.1.1 Edit 4)/Data" }  # Clickteam Fusion saves live next to the exe (re-extracted on rebuild)
   - { name: sm64ds-port,          src: "Games/sm64ds-port/save" }          # SM64 DS port cartridge save + save states (re-extracted gamedir on rebuild)
   - { name: wwhd-recomp,          src: "tools/wwhd-recomp/data/save" }     # Wind Waker HD recomp saves + Picto Box pics (game rebuilt from dump on rebuild)
@@ -242,6 +277,16 @@ dg_save_sets:
                                         "file:tools/vf1-recomp/VirtuaFighter/nvram.sav",
                                         "file:tools/vf1-recomp/VirtuaFighter/ranking_names.txt"] }
   - { name: vf3-recomp,           src: "{{ dg_vf3_data_rel }}" }  # VF3 settings, EEPROM, rankings, screenshots and logs; separate from release files
+  # Gran Turismo 6 PC: RPCS3 saves/config and the launcher profile
+  - { name: gt6,                  src: [".local/share/gt6-launcher/config/rpcs3/dev_hdd0/home",
+                                       "file:.local/share/gt6-launcher/launcher.json"] }
+
+  # Sega Rally 2 Native: the port's EEPROM and settings
+  - { name: sega-rally-2-native,  src: "Games/sega-rally-2-native/save" }
+
+  # Rad Mobile (REA launcher): settings.ini, wheel.ini and MAME's nvram EEPROM
+  - { name: rea-rad-mobile,       src: ".local/share/rea-rad-mobile" }
+
   # Sonic Momentum (GameMaker fangame): the .sav slots it may write beside the
   # exe, plus the sandboxed %LOCALAPPDATA% folder GameMaker uses when present.
   - { name: sonic-momentum,       src: ["file:Games/sonic-momentum/SM.sav",

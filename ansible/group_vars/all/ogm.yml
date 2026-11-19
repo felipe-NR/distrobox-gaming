@@ -248,6 +248,53 @@ dg_ogm_games:
     category: recomp
     sgdb_query: "Road Rash 64"
     github: "{{ dg_rr64_repo }}"
+  # Daytona USA 2 Power Edition as a WASM/WebGPU cabinet served from this
+  # box; the desktop entry runs the local server + Chromium wrapper.
+  - desktop_id: gaming-daytona2-web
+    id: daytona2-web
+    category: recomp
+    sgdb_query: "Daytona USA 2"
+    github: "{{ dg_daytona2_web_repo }}"
+  - desktop_id: gaming-redline
+    id: redline
+    category: recomp
+    sgdb_query: "Forza Motorsport"
+    github: "{{ dg_redline_repo }}"
+  - desktop_id: gaming-sega-racing
+    id: sega-racing
+    category: arcade
+    sgdb_query: "OutRun 2 SP"
+    github: "{{ dg_sega_repo }}"
+  - desktop_id: gaming-nintendo-arcade
+    id: nintendo-arcade
+    category: arcade
+    sgdb_query: "Mario Kart Arcade GP"
+    github: "{{ dg_nintendo_repo }}"
+  - desktop_id: gaming-mvc2
+    id: mvc2
+    category: recomp
+    sgdb_query: "Marvel vs. Capcom 2"
+    github: "{{ dg_mvc2_repo }}"
+  - desktop_id: gaming-wangan
+    id: wangan
+    category: arcade
+    sgdb_query: "Wangan Midnight Maximum Tune"
+    github: "{{ dg_wangan_repo }}"
+  - desktop_id: gaming-initiald
+    id: initiald
+    category: arcade
+    sgdb_query: "Initial D Arcade Stage"
+    github: "{{ dg_initiald_repo }}"
+  - desktop_id: gaming-rondo-recomp
+    id: rondo-recomp
+    category: recomp
+    sgdb_query: "Castlevania: Rondo of Blood"
+    github: "{{ dg_rondo_repo }}"
+  - desktop_id: gaming-super-hang-on-ultimate
+    id: super-hang-on-ultimate
+    category: recomp
+    sgdb_query: "Super Hang-On"
+    github: "{{ dg_sho_repo }}"
   - desktop_id: gaming-fzero
     id: fzero
     category: recomp
@@ -435,6 +482,12 @@ dg_ogm_games:
       sgdb_query: "OutRunners", github: "{{ dg_or_repo }}" }
   - { desktop_id: gaming-vrdeluxe, id: vrdeluxe, category: port,
       sgdb_query: "Virtua Racing Deluxe", github: "{{ dg_vrde_repo }}" }
+  - { desktop_id: gaming-gt6, id: gt6, category: emulator,
+      sgdb_query: "Gran Turismo 6", github: "{{ dg_gt6_repo }}" }
+  - { desktop_id: gaming-sega-rally-2-native, id: sega-rally-2-native, category: recomp,
+      sgdb_query: "Sega Rally 2", github: "{{ dg_sr2n_repo }}" }
+  - { desktop_id: gaming-rad-mobile, id: rad-mobile, category: arcade,
+      sgdb_query: "Rad Mobile", github: "{{ dg_radm_repo }}" }
   - { desktop_id: gaming-sonic-momentum, id: sonic-momentum, category: fangame,
       web_url: "https://sonicfangameshq.com/forums/showcase/sonic-momentum-beta-edition.2324/" }
   - { desktop_id: gaming-recasted, id: recasted, category: emulator,
@@ -606,6 +659,12 @@ dg_ogm_games:
     category: wine
     sgdb_query: "Colin McRae Rally"
     github: akitaonrails/rea-colin-mcrae
+  - desktop_id: rea-colin-mcrae-recomp
+    id: rea-colin-mcrae-recomp
+    name: "Colin McRae Rally Modern (Recomp)"
+    category: recomp
+    sgdb_query: "Colin McRae Rally"
+    github: "{{ dg_cmr_recomp_repo }}"
   - desktop_id: rea-colin-mcrae-3
     id: rea-colin-mcrae-3
     name: "Colin McRae Rally 3 (REA)"

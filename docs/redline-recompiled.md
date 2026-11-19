@@ -1,52 +1,77 @@
-# Forza Motorsport (Xbox, 2005) — Redline Recompiled (not installed)
+# Forza Motorsport (Xbox, 2005) — Redline Recompiled
 
 [DivxPlays/redline-recompiled](https://github.com/DivxPlays/redline-recompiled)
 is a static recompilation of the original Xbox **Forza Motorsport** (2005):
 x86-32 code lifted to C and rebuilt as a 64-bit Windows program with a new
-D3D11/12 + DLSS/FSR graphics layer, 144 fps and ultrawide support. v0.1.0
-(2026-11-06) is the first playable release.
+D3D11/12 + DLSS/FSR layer, 144 fps and ultrawide support.
 
-**Status on this box: parked (2026-11-06), nothing installed.** Resuming it
-needs a Windows (MSVC) build, or a cross-compile effort — see *Staged for a
-future attempt* at the end. Two independent reasons it cannot be built here:
+**Status here: installed and working (2026-11-17).** The Windows game is built
+with **Linux Zig** from the owned Rev 1 disc and played through **GE-Proton**;
+the live game reaches its profile-select/title screens under Wine.
 
-## 1. The build is Windows/MSVC only
+```sh
+cd ansible && ansible-playbook install-redline-recomp.yml   # or site.yml --tags redline
+```
 
-The release is source-only (358 files, `runtime/`, `recomp/`, `launcher/`,
-`tools/`). `tools/build.py` builds `redline.exe` by running
-`cmd /c "…vcvars64.bat"` and then **MSVC** (`cl`, `rc`) with MSVC-style flags
-(`/O2 /W3 /MP /D…`); `third_party/dlss` and `third_party/fsr` are fetched by
-`tools/fetch_sdks.py` during the build. There is no CMake, MinGW or clang-cl
-path, and nothing prebuilt in the zip or in CI, so it cannot be produced here
-without installing MSVC in a Windows environment (or cross-compiling with
-clang-cl against an MSVC SDK, which is a project in its own right).
+| | |
+|---|---|
+| Release | `0.3.0` source/launcher zip (SHA256-pinned), staged in `ROMS_FINAL/PC/releases/` |
+| Disc | `ROMS_FINAL/xbox/Forza Motorsport (USA) … (Rev 1)/…iso`; its `Forza.xbe` SHA-1 is `e60a968e…` |
+| Install | `tools/redline/` — sources, `game/` (extracted disc), `build/redline.exe`, `forza_recomp.dll`, saves |
+| Build tools | Linux Zig 0.14.1 + a Python venv with Capstone 5.0.7 (`tools/redline/.venv`, `tools/zig-linux`) |
+| Proton | GE-Proton 11-5 (`wineprefixes/redline-proton`), DXVK + Microsoft's native `d3dcompiler_47.dll` |
+| Launcher | `bin/redline`; entry **Forza Motorsport · Redline** |
 
-## 2. The disc does not match the one the launcher accepts
+## How it runs
 
-`launcher/launcher.cpp` hard-codes one executable:
-`XBE_SHA1 e60a968e7ea73a1065b87dc1120f0b02e2eb1b58` for **Forza Motorsport
-(USA) (Rev 1), `Forza.xbe`**. Both Forza ISOs in this library
-(`EmuDeck/roms_heavy/xbox/` and `ROMS_FINAL/xbox-iso/`, same 3,195,770,880-byte
-image) are a repack whose game executable is named `default.xbe`, title id
-`0x4D53006E` ("Forza Motorsport"), SHA-1 `42f796aa4aad85d941fce3eae0ab8b3f8fc9bc82`
-— a different pressing (the retail disc's `Forza.xbe` is the game; its
-`default.xbe` is the CDX launcher). `tools/build.py` itself does not check the
-hash, so a manual/CI build might still lift this image, but the supplied
-launcher refuses it.
+The release is a Windows/MSVC project with an optional `--zig` path. Its
+launcher expects Windows' `tar.exe` to unpack its tools, which Wine does not
+have, so the role builds the same sources directly:
 
-## Staged for a future attempt
+- extracts the owned Rev 1 ISO with `extract-xiso` into `game/` (the `Forza.xbe`
+  SHA-1 is checked);
+- runs the package's `find_functions.py`, `oovpa_pp.py`, `find_symbols.py` and
+  `lift.py` with a Python venv + Capstone;
+- runs `tools/build.py --zig` with **Linux** Zig 0.14.1. Two small patches make
+  the source build on Linux: `ZIG` comes from `REDLINE_ZIG`, and the job count
+  no longer calls `ctypes.windll`.
 
-`ROMS_FINAL/PC/ports/redline-recompiled/v0.1.0/RedlineRecompiled-0.1.0.zip`
-(SHA-256 `9c87c1da38dc0a6a0cc6d2a89f7d93aa458f65d00c89bf44102ae5c3c424f624`).
+The game's D3D11 shaders do not compile with Wine's built-in
+`d3dcompiler_47.dll`; the role installs Microsoft's native DLL into the Proton
+prefix and sets the override. Proton then supplies DXVK and Vulkan.
 
-Paths forward, in order of effort:
+## Settings and controls
 
-1. **Build on Windows** (a VM qualifies): run `RedlineLauncher.exe`, point it
-   at the disc, press Build, then copy the resulting folder to the box. A role
-   can then install that artifact the way the PGR1/PGR2 roles install their
-   launchers, and a Wine prefix with DXVK runs it.
-2. **Cross-compile here**: `clang-cl` + an MSVC CRT/Windows SDK fetched by
-   `xwin`, plus `llvm-rc` for the launcher's resources, and a shim for
-   `build.py`'s `vcvars64` step. This is untested upstream.
-3. **Get the Rev 1 `Forza.xbe`** (SHA-1 `e60a968e…`) before either of the above
-   if the launcher is to be used as shipped.
+The role seeds `build/recomp.ini` at **1080i video mode, 2× render scale**
+(3840×2160 internal), borderless fullscreen, 16:9, 16× anisotropic filtering
+and no upscaler (native). The in-game Recomp Settings menu rewrites the file;
+later changes survive. Pads follow the Xbox layout (RT/LT throttle/brake, stick
+steer, shoulders gears, Y camera); keyboard controls are in `README.md`.
+
+On this Wayland desktop Wine still reports a 1706×960 client window and
+presents 1920×1080 guest frames; the 2× render scale is applied internally.
+The game's own resolution setting is at its maximum (1080i/2×); a true 4K
+swapchain needs a Wine/gamescope setup that reports the 3840×2160 desktop
+without Xwayland's 1.5 scale.
+
+Saves are in `hdd/Partition1/UDATA` beside the install (backed up as
+`redline-recomp`).
+
+## Verified here
+
+- The Rev 1 disc was extracted and `Forza.xbe` matched the expected SHA-1.
+- The full lift/build completed (`build/redline.exe`, `forza_recomp.dll`,
+  `SDL3.dll`, DLSS/FSR DLLs).
+- A bounded launch through GE-Proton reached **Redline Recompiled 0.3.0**
+  and the in-game **Player Profile / Profile Select** screen, with audio
+  initialized and frames rendering.
+- A race, controller input, DLSS/FSR modes and the optional 4x texture pack
+  were not exercised in this install.
+
+## Updating
+
+Bump `dg_redline_version` and the zip SHA in
+`group_vars/all/redline_recomp.yml`, then re-run. The role rebuilds only when
+`build/redline.exe` is absent; to force a rebuild remove `build/redline.exe`
+(or the whole `build/` directory) and re-run. Revert with
+`-e dg_redline_revert=true`; the disc and `hdd/` saves are untouched.

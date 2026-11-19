@@ -13,6 +13,7 @@ data are provided or linked here** — recomps and hacks need your own legal dum
 
 | Project | What it is | Source |
 |---|---|---|
+| Gran Turismo 6 PC | GT6-tuned RPCS3 + launcher: 4K/300% upscaling, graphics patches, firmware/update installers, wheel support, LAN | [Mabec-games/Gran-Turismo-6-PC](https://github.com/Mabec-games/Gran-Turismo-6-PC) · [doc](gt6-pc.md) |
 | ReCasted | HLE loader that runs Ratchet & Clank (PS4) natively on Vulkan 1.3 (needs the CUSA01073/01047 v1.09 dump) | [AndyALRLabs/ReCasted](https://gitlab.com/AndyALRLabs/ReCasted) · [doc](recasted.md) |
 | Lichii | Experimental Switch 2 emulator, built from the pinned `nx2` commit with an isolated profile and optional restricted runtime | [zortos293/Lichii](https://github.com/zortos293/Lichii) · [doc](lichii.md) |
 | Lichii Shader Sync | Third-party CLI that merges community Vulkan shader packs into Lichii/Eden caches (Ocarina pack: 88,982 pipelines) | [oceanpacificpeace/lichii-shader-sync](https://github.com/oceanpacificpeace/lichii-shader-sync) · [doc](lichii.md) |
@@ -26,6 +27,8 @@ data are provided or linked here** — recomps and hacks need your own legal dum
 | 2 Ship 2 Harkinian | Majora's Mask PC port | [HarbourMasters/2ship2harkinian](https://github.com/HarbourMasters/2ship2harkinian) · [doc](2ship2harkinian.md) |
 | DekUI | Single-screen Majora's Mask 3D via a custom Azahar build | [tgacquin/mm3d-dekui](https://github.com/tgacquin/mm3d-dekui) · [doc](dekui-mm3d.md) |
 | Nebula | Super Mario Galaxy Wii recompilation (Windows-only runtime; Linux blocked at NAND preflight) | [keepvaibin/nebula](https://github.com/keepvaibin/nebula) · [doc](nebula-galaxy.md) |
+| Daytona USA 2 PE — Web | Sega Model 3 arcade static recompilation as a WASM + WebGPU static site, served locally with your own `dayto2pe` set preloaded | [johannruiz/daytona-usa-2-web](https://github.com/johannruiz/daytona-usa-2-web) · [doc](daytona2-web.md) |
+| Sega Rally 2 Native | Model 3 arcade static recompilation, Vulkan renderer with ray tracing, true widescreen; Windows build cross-compiled with MinGW and run under Wine | [snicolast/SegaRally2Native](https://github.com/snicolast/SegaRally2Native) · [doc](sega-rally-2-native.md) |
 | RalliSport Challenge 2 Recompiled | Original Xbox native Linux recompilation | [Mortify7612/RallisportChallenge2-decomp](https://github.com/Mortify7612/RallisportChallenge2-decomp) · [doc](rsc2.md) |
 | Gran Turismo 4 Recompiled | PS2 USA retail static recompilation, Windows build under Wine | [moesuito/gt4-staticrecomp](https://github.com/moesuito/gt4-staticrecomp) · [doc](gt4-recomp.md) |
 | OpenCMR2 | Native Colin McRae Rally 2.0 port | [pablocpas/OpenCMR2](https://github.com/pablocpas/OpenCMR2) · [doc](opencmr2.md) |
@@ -38,6 +41,7 @@ data are provided or linked here** — recomps and hacks need your own legal dum
 | REA Colin McRae: DiRT | Self-contained launcher for the 2007 PC game (own Wine + DXVK, private runtime copy) | [akitaonrails/rea-dirt](https://github.com/akitaonrails/rea-dirt) · [doc](rea-dirt.md) |
 | REA DiRT Rally | Self-contained launcher for Feral's **native Linux** port of the 2015 game (bundled scout libraries + Ryzen-5000 crash shim, gamescope, pad hot-plug, private runtime copy — no Wine) | [akitaonrails/rea-dirt-rally](https://github.com/akitaonrails/rea-dirt-rally) · [doc](rea-dirt-rally.md) |
 | REA Colin McRae Rally | Modern launcher for the original 1998 PC game under Wine | [akitaonrails/rea-colin-mcrae](https://github.com/akitaonrails/rea-colin-mcrae) · [doc](colin-mcrae-rally-1.md) |
+| Colin McRae Rally Modern (Recomp) | Native Rust/SDL3/wgpu clean-room reconstruction of the 1998 EU PC game (4K widescreen, 144 FPS sub-tick interpolation, MSAA 4×, AF 16×, optional HD art pack, native SDL3 gamepad) | [akitaonrails/rea-colin-mcrae-recomp](https://github.com/akitaonrails/rea-colin-mcrae-recomp) · [doc](rea-colin-mcrae-recomp.md) |
 | God of War III SpartanPort | PS4 native PC port | [FelipePrado0/gow3_pc](https://github.com/FelipePrado0/gow3_pc) · [doc](gow3-pc.md) |
 | Gran Turismo Sport through RyGT | PS4 recompilation under Wine | [mlgprorektm8/RyGT](https://github.com/mlgprorektm8/RyGT) · [doc](rygt-gt-sport.md) |
 | Resident Evil Code: Veronica X HD Recomp | PS3 PSN static recompilation, Windows build through GE-Proton | [kastieloficial/RE-Code-Veronica-PS3-HD-Recomp-PC](https://github.com/kastieloficial/RE-Code-Veronica-PS3-HD-Recomp-PC) · [doc](code-veronica-recomp.md) |
@@ -53,7 +57,7 @@ data are provided or linked here** — recomps and hacks need your own legal dum
 | F-ZERO GX · GLINUX | GameCube F-ZERO GX on a Dolphin-derived runtime (ModernGekko), native widescreen | [Mabec-games/F-ZERO-GLINUX](https://github.com/Mabec-games/F-ZERO-GLINUX) · [doc](fzero-glinux.md) |
 | Gravity Rush PC | Gravity Rush Remastered (PS4) native port (shadPS4 video core) | [LucaPazienza/gravityrush_pc](https://github.com/LucaPazienza/gravityrush_pc) · [doc](gravity-rush.md) |
 | KytyPS5-GT7 | PS5 emulator branch tuned for Gran Turismo 7 (native Linux build) | [usa-ratt/KytyPS5-GT7](https://github.com/usa-ratt/KytyPS5-GT7) · [doc](kyty-gt7.md) |
-| DOA2U PC Port | Dead or Alive 2 Ultimate (Xbox) native port by static recompilation | [NoRain211/doa2u-re](https://github.com/NoRain211/doa2u-re) · [doc](doa2u-re.md) |
+| DOA2U PC Port (Moonalesca fork) | Dead or Alive 2 Ultimate (Xbox) native recompilation: KO replay, DOA4 hit voices, HUD/life-bar options | [Moonalesca/doa2u-re](https://github.com/Moonalesca/doa2u-re) · [doc](doa2u-re.md) |
 | GT3 Revisited | Gran Turismo 3 A-Spec engine reimplementation (native Linux/Android/VR) | [matt-pulsipher/GT3-revisited](https://github.com/matt-pulsiffer/GT3-revisited) · [doc](gt3-revisited.md) |
 | GT2 PC Port | Gran Turismo 2 native decompilation port + mod kit (win-x64 via Proton) | [CurtisSlone/GT2-PC-Port-Mod-Kit](https://github.com/CurtisSlone/GT2-PC-Port-Mod-Kit) · [doc](gt2-pc-port.md) |
 | SOTC PC Port | Shadow of the Colossus (PS4 remake) native port (win-x64 via Proton) | [AjncSystem/ShadowOfTheColossus-PC](https://github.com/AjncSystem/ShadowOfTheColossus-PC) · [doc](sotc-pc.md) |
@@ -73,7 +77,14 @@ data are provided or linked here** — recomps and hacks need your own legal dum
 | Road Rash 64 Recompiled | N64 recompilation (native Linux AppImage) | [linkssy2/RoadRash64Recompiled](https://github.com/linkssy2/RoadRash64Recompiled) · [doc](roadrash64.md) |
 | Perfect Dark | N64 decomp PC port | [DabDavis/perfect-dark-dabs-mod](https://github.com/DabDavis/perfect-dark-dabs-mod) · [doc](perfect-dark.md) |
 | DKC 1 / 2 / 3 Recompiled | SNES recomp trilogy (source-built) | [elliotttate/DKC1Recomp](https://github.com/elliotttate/DKC1Recomp) · [2](https://github.com/elliotttate/DKC2Recomp) · [3](https://github.com/elliotttate/DKC3Recomp) · [doc](dkc-recomp.md) |
-| F-Zero SNES Recompiled | SNES recomp (native Linux AppImage), widescreen | [mstan/FZeroSNESRecomp](https://github.com/mstan/FZeroSNESRecomp) · [doc](fzero-recomp.md) |
+| Sega arcade racing (REA) | OutRun 2 SP, SEGA Rally 3, SEGA Racing Classic, Daytona USA, F355 — open loaders, wheels/pads, FSR | [akitaonrails/rea-teknoparrot-sega-series](https://github.com/akitaonrails/rea-teknoparrot-sega-series) · [doc](rea-sega.md) |
+| Nintendo arcade (REA) | F-Zero AX, Mario Kart Arcade GP 2/DX, Luigi's Mansion — Dolphin + windowsarcadeloader, pad/wheel | [akitaonrails/rea-teknoparrot-nintendo-series](https://github.com/akitaonrails/rea-teknoparrot-nintendo-series) · [doc](rea-nintendo.md) |
+| Marvel vs. Capcom 2 (NAOMI/Dreamcast) | Decompilation port: arcade NAOMI + Dreamcast, SDL_GPU/Vulkan under Wine, 4K/4x AA | [gibletto/mvc2-naomi-dc](https://github.com/gibletto/mvc2-naomi-dc) · [doc](mvc2-naomi-dc.md) |
+| Wangan Midnight arcade series (REA) | One hub for Maximum Tune 3–6RR: OpenParrot/OpenParrot_WMMT/WanganArcadeLoader, 4K, pad/wheel | [akitaonrails/rea-teknoparrot-wangan-series](https://github.com/akitaonrails/rea-teknoparrot-wangan-series) · [doc](rea-wangan.md) |
+| Initial D arcade series (REA) | One hub for Ver. 1–THE ARCADE Season 5: Flycast NAOMI 2, lindbergh-loader, windowsarcadeloader; pad/wheel, 4K | [akitaonrails/rea-teknoparrot-initial-d-series](https://github.com/akitaonrails/rea-teknoparrot-initial-d-series) · [doc](rea-initiald.md) |
+| Rondo of Blood Recomp | PC Engine Super CD-ROM² native recompilation: rewind, save states, English/Japanese discs, 4:3 at 4K | [gminustwo/RondoRecomp](https://github.com/gminustwo/RondoRecomp) · [doc](rondo-recomp.md) |
+| Super Hang-On Ultimate | Arcade Super Hang-On native recomp (source build) with Mega Drive Original Mode, 16:9 | [chaotix359/Super-Hang-On-Ultimate](https://github.com/chaotix359/Super-Hang-On-Ultimate) · [doc](super-hang-on-ultimate.md) |
+| F-Zero Forever | SNES recomp (native Linux source build): 85 courses, HD Mode 7, 240 FPS, 2-4 player local VS, netplay | [RetroPortingToolKit/FZeroSNESRecomp](https://github.com/RetroPortingToolKit/FZeroSNESRecomp) · [doc](fzero-recomp.md) |
 | Virtua Fighter Recompiled | SEGA Model 1 Virtua Fighter static recomp (native Linux, Vulkan); needs your MAME `vf` set | [mr-finster/vf1-recomp](https://github.com/mr-finster/vf1-recomp) · [doc](vf1-recomp.md) |
 | Virtua Fighter 3 Recomp | SEGA Model 3 native Linux recomp; needs the MAME Revision D `vf3` set | [mr-finster/vf3-recomp](https://github.com/mr-finster/vf3-recomp) · [doc](vf3-recomp.md) |
 | Super Mario All-Stars · PC Port | Native C++ port of the SNES collection: true widescreen (to 21:9), 2-player co-op, rewind, achievements, MSU-1; runs the 1993 USA ROM (replaces the retired recomp) | [Darhkfox/SuperMarioAllStars](https://github.com/Darhkfox/SuperMarioAllStars) · [doc](smas.md) |
@@ -116,6 +127,7 @@ data are provided or linked here** — recomps and hacks need your own legal dum
 
 | Project | What it is | Source |
 |---|---|---|
+| Rad Mobile (REA) | System 32 arcade racer: bundled patched MAME, 4K widescreen, Arcade/Trinitron CRT filters with curvature, cabinet bezel, wheel + FFB, remappable controls, arcade settings | [akitaonrails/rea-rad-mobile](https://github.com/akitaonrails/rea-rad-mobile) · [doc](rea-rad-mobile.md) |
 | CannonBall-DX | OutRun engine | [Endprodukt/cannonball-dx](https://github.com/Endprodukt/cannonball-dx) · [doc](cannonball.md) |
 | Sega Model 1 (Wanszai) | Virtua Racing / Virtua Fighter | [Virtua-Racing](https://github.com/wanszai/Virtua-Racing---XBOXONE-Windows) · [Virtua-Fighter](https://github.com/wanszai/Virtua-Fighter---XboxOne-Windows) · [doc](sega-arcade.md) |
 | Sega Rally HD (Wanszai) | Model 2 Sega Rally wrapper | [wanszai/Sega-Rally-Championship-…](https://github.com/wanszai/Sega-Rally-Championship-PC-Xbox360-Series-X-) · [doc](sega-arcade.md) |
@@ -125,7 +137,7 @@ data are provided or linked here** — recomps and hacks need your own legal dum
 | SoulCalibur · Voldorium | Dreamcast SoulCalibur static recompilation, native Linux build, 16:9 + rollback netplay | [enrique363/voldorium](https://github.com/enrique363/voldorium) · [doc](voldorium.md) |
 | Virtua Racing Deluxe Enhanced | Sega 32X Virtua Racing Deluxe on a PicoDrive HLE core that draws the 3D on the GPU (4K, MSAA, 16:9, analog pad, 60 fps) | [PokaMilkTea/VirtuaRacingDeluxeEnhanced](https://github.com/PokaMilkTea/VirtuaRacingDeluxeEnhanced) · [doc](vrdeluxe.md) |
 | Star Wars Trilogy Native | Sega Model 3 arcade port (Vulkan, RT shadows) — **not installed**: Windows/MSVC-only build, the ROM set is present and verified | [snicolast/StarWarsTrilogyNative](https://github.com/snicolast/StarWarsTrilogyNative) · [doc](starwars-trilogy-native.md) |
-| Redline Recompiled | PC recompilation of Forza Motorsport (Xbox, 2005) — **not installed**: MSVC-only build and a disc-hash mismatch, see the doc | [DivxPlays/redline-recompiled](https://github.com/DivxPlays/redline-recompiled) · [doc](redline-recompiled.md) |
+| Redline Recompiled | PC recompilation of Forza Motorsport (Xbox, 2005): Linux-Zig build from the Rev 1 disc, played through GE-Proton | [DivxPlays/redline-recompiled](https://github.com/DivxPlays/redline-recompiled) · [doc](redline-recompiled.md) |
 | Project Gotham Racing 2 Recomp | PC recompilation of the original Xbox release (XboxXBERecomp SDK, same family as PGR1/NightFire) | [hk21x/pgr2-recomp](https://github.com/hk21x/pgr2-recomp) · [doc](pgr2-recomp.md) |
 | Project Gotham Racing Recomp | PC recompilation of the original Xbox release (same XboxXBERecomp SDK as NightFire), built from an owned USA disc; runs under Wine with native d3dcompiler + DXVK, 4K via gamescope | [hk21x/pgr1-recomp](https://github.com/hk21x/pgr1-recomp) · [doc](pgr1-recomp.md) |
 | Model 2 Emulator | ElSemi's Model 2 (closed-source) | [SEGA Retro](https://segaretro.org/Model_2_Emulator) · [doc](sega-arcade.md) |
