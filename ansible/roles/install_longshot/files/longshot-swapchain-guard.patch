@@ -1,7 +1,7 @@
-diff --git a/gpu/vk/vk_internal.h b/gpu/vk/vk_internal.h
-index 7b8a9271..8b9bc638 100644
---- a/gpu/vk/vk_internal.h
-+++ b/gpu/vk/vk_internal.h
+diff --git i/gpu/vk/vk_internal.h w/gpu/vk/vk_internal.h
+index 14c5cd8..f28cbe9 100644
+--- i/gpu/vk/vk_internal.h
++++ w/gpu/vk/vk_internal.h
 @@ -5,6 +5,7 @@
  #include <array>
  #include <atomic>
@@ -10,7 +10,7 @@ index 7b8a9271..8b9bc638 100644
  #include <string>
  #include <vector>
  
-@@ -40,6 +41,12 @@ void queue_flush();          // (the same, taking dev.present_mu)
+@@ -44,6 +45,12 @@ void queue_flush();          // (the same, taking dev.present_mu)
  // (longshot) held submits out, then vkDeviceWaitIdle with the present queue's lock taken too (dev.present_mu held): the device's
  // every queue is synchronized by the host around it
  void device_wait_idle_locked();
@@ -20,16 +20,16 @@ index 7b8a9271..8b9bc638 100644
 +/// shared (vk_work.h), swapchain create and destroy take it exclusively (vk_main.cpp). Both hold it only across
 +/// the one driver call and take no other lock inside it.
 +inline std::shared_mutex swapchain_driver_mu;
- 
- struct Device {
-     VkInstance instance = VK_NULL_HANDLE;
-diff --git a/gpu/vk/vk_main.cpp b/gpu/vk/vk_main.cpp
-index 03d208bd..3ae75cf2 100644
---- a/gpu/vk/vk_main.cpp
-+++ b/gpu/vk/vk_main.cpp
-@@ -755,13 +755,19 @@ int swapchain_framegen() { return opts.framegen >= 2 ? std::min(opts.framegen, 4
- /// to 8x: swapchain_framegen stops at 4, for the images)
- bool swapchain_dlssg() { return swapchain_framegen() >= 2 && dlss_fg_runs(opts.framegen - 1); }
+ // (longshot) why the swapchain is SDR though the Insert menu's HDR is on (Device::hdr_sdr_why): no VK_EXT_swapchain_colorspace;
+ // HDR off in Windows' display settings; HDR on there but the driver lists no HDR10 surface
+ // (docs/common-issues.md); the display lists none and the system's setting is not known (Linux, or a Windows that doesn't say).
+diff --git i/gpu/vk/vk_main.cpp w/gpu/vk/vk_main.cpp
+index b7e6443..5628bd7 100644
+--- i/gpu/vk/vk_main.cpp
++++ w/gpu/vk/vk_main.cpp
+@@ -938,6 +938,12 @@ int swapchain_framegen() { const int framegen = framegen_now(); return framegen
+ /// at that + 1 while DLSS-G makes the frames. swapchain_framegen stops at 4, for the images)
+ bool swapchain_dlssg() { return swapchain_framegen() >= 2 && dlss_fg_runs(framegen_now() - 1); }
  
 +/// (distrobox-gaming patch) a swapchain destroyed with no timeline read in the driver meanwhile (vk_internal.h)
 +static void destroy_swapchain_guarded(VkSwapchainKHR sc) {
@@ -40,7 +40,8 @@ index 03d208bd..3ae75cf2 100644
  void retire_swapchain() {
      if (!dev.swapchain) return;
      device_wait_idle_locked();
-     reflex_swapchain_destroyed();
+@@ -945,7 +951,7 @@ void retire_swapchain() {
+     fg_latency_swapchain_gone();   // (RX_VK_FG_LATENCY_LOG's waits for its presents)
      swap_views_drop();
      for (auto semaphore : dev.swap_rendered) vkDestroySemaphore(dev.device, semaphore, nullptr);
 -    vkDestroySwapchainKHR(dev.device, dev.swapchain, nullptr);
@@ -48,10 +49,10 @@ index 03d208bd..3ae75cf2 100644
      dev.swapchain = VK_NULL_HANDLE;
      ++dev.swapchain_generation;
      dev.swap_rendered.clear();
-@@ -953,7 +959,10 @@ bool create_swapchain(uint32_t width, uint32_t height) {
-     }
+@@ -1188,7 +1194,10 @@ bool create_swapchain(uint32_t width, uint32_t height) {
      reflex_swapchain_info(ci);   // (NVIDIA Reflex: latency mode on)
      VkSwapchainKHR sc;
+     if (dev.swapchain) fg_latency_swapchain_gone();   // (oldSwapchain: RX_VK_FG_LATENCY_LOG's waits on it end first)
 -    result = vkCreateSwapchainKHR(dev.device, &ci, nullptr, &sc);
 +    {
 +        std::unique_lock lk(swapchain_driver_mu);   // (distrobox-gaming patch: vk_internal.h)
@@ -60,7 +61,7 @@ index 03d208bd..3ae75cf2 100644
      // Passing oldSwapchain retires it even when creation fails. Nothing may acquire from it again.
      retire_swapchain();
      if (invalidate_lost_surface(result)) return false;
-@@ -963,12 +972,12 @@ bool create_swapchain(uint32_t width, uint32_t height) {
+@@ -1198,12 +1207,12 @@ bool create_swapchain(uint32_t width, uint32_t height) {
          return false;
      }
      if (vkGetSwapchainImagesKHR(dev.device, sc, &n, nullptr) != VK_SUCCESS || !n) {
@@ -75,7 +76,7 @@ index 03d208bd..3ae75cf2 100644
          return false;
      }
      images.resize(n);
-@@ -978,7 +987,7 @@ bool create_swapchain(uint32_t width, uint32_t height) {
+@@ -1213,7 +1222,7 @@ bool create_swapchain(uint32_t width, uint32_t height) {
          if (vkCreateSemaphore(dev.device, &si, nullptr, &semaphore) != VK_SUCCESS) {
              for (auto made : rendered)
                  if (made) vkDestroySemaphore(dev.device, made, nullptr);
@@ -84,10 +85,10 @@ index 03d208bd..3ae75cf2 100644
              return false;
          }
      }
-diff --git a/gpu/vk/vk_work.h b/gpu/vk/vk_work.h
-index b6055b7f..dfd9d053 100644
---- a/gpu/vk/vk_work.h
-+++ b/gpu/vk/vk_work.h
+diff --git i/gpu/vk/vk_work.h w/gpu/vk/vk_work.h
+index 76d55d4..0f41a7b 100644
+--- i/gpu/vk/vk_work.h
++++ w/gpu/vk/vk_work.h
 @@ -5,10 +5,12 @@
  #pragma once
  
@@ -113,7 +114,7 @@ index b6055b7f..dfd9d053 100644
  } // namespace mkwvk
  
  #define vkCmdPipelineBarrier2(...) (::mkwvk::note_work(), ::mkwvk::rec::rx_vkCmdPipelineBarrier2(__VA_ARGS__))
-@@ -105,7 +112,7 @@ inline void note_work() {
+@@ -106,7 +113,7 @@ inline void note_work() {
  #define vkWaitForFences(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkWaitForFences), ::mkwvk::gpu_wait_stats::fences(::vkx::vkWaitForFences, __VA_ARGS__))
  #define vkResetFences(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkResetFences), ::vkx::vkResetFences(__VA_ARGS__))
  #define vkWaitSemaphores(...) (::mkwvk::rec::boundary(::mkwvk::rec::B_vkWaitSemaphores), ::mkwvk::gpu_wait_stats::timeline(::vkx::vkWaitSemaphores, __VA_ARGS__))

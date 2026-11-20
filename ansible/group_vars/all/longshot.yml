@@ -17,13 +17,13 @@
 
 dg_longshot_forge: https://git.magicbean.dev
 dg_longshot_repo: MagicBeanDev/Longshot
-# No stable yet (the first will be v3.0.0). Pin an rc tag; never a
-# nightly-<n>-<sha> tag: one is cut on every push and only the newest five stay.
-dg_longshot_release_tag: v3.0.0-rc.4
+# Pin a stable or rc tag; never a nightly-<n>-<sha> tag: one is cut on every
+# push and only the newest five stay.
+dg_longshot_release_tag: v3.0.0
 dg_longshot_asset_name: "Longshot-{{ dg_longshot_release_tag }}-x86_64.AppImage"
 dg_longshot_asset_url: "{{ dg_longshot_forge }}/{{ dg_longshot_repo }}/releases/download/{{ dg_longshot_release_tag }}/{{ dg_longshot_asset_name }}"
 # From the release's SHA256SUMS.
-dg_longshot_asset_sha256: "7a87f29499e2d71d3a1f0ab20d5d532095a2663785617f7e20c2d2b2b83c54ff"
+dg_longshot_asset_sha256: "790933298aca208e0da68a32cb3d3217fd98e999a022e2a8dd54661e6824b1c5"
 dg_longshot_archive: "{{ dg_roms_final_root }}/PC/releases/{{ dg_longshot_asset_name }}"
 
 dg_longshot_root: "{{ dg_box_home }}/tools/longshot"
@@ -61,7 +61,8 @@ dg_longshot_build_jobs: "{{ ansible_facts.processor_vcpus | default(8) }}"
 # The patch list is part of the build ref, so changing it rebuilds the game.
 # longshot-swapchain-guard.patch: rc.4 SIGSEGV in libnvidia-glcore (615.78)
 # when the replay thread's vkGetSemaphoreCounterValue raced the presenter's
-# swapchain rebuild; see docs/longshot.md.
+# swapchain rebuild; not fixed upstream as of v3.0.0, rebased onto it; see
+# docs/longshot.md.
 dg_longshot_source_patches:
   - longshot-swapchain-guard.patch
 dg_longshot_revert: false

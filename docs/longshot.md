@@ -50,12 +50,11 @@ untouched).
 
 ## How it works
 
-- Downloads the pinned `Longshot-v3.0.0-rc.4-x86_64.AppImage` from the Forgejo
+- Downloads the pinned `Longshot-v3.0.0-x86_64.AppImage` from the Forgejo
   release (sha256 from its `SHA256SUMS`, kept in `group_vars/all/longshot.yml`)
   and extracts it with `--appimage-extract`, because the restricted box has no
-  FUSE. There is no stable release yet; the first will be v3.0.0. Pin `rc` tags
-  until then, never a `nightly-<n>-<sha>` tag: one is cut on every push and only
-  the newest five are kept.
+  FUSE. Pin stable or `rc` tags, never a `nightly-<n>-<sha>` tag: one is cut on
+  every push and only the newest five are kept.
 - `LONGSHOT_BUILDER_HOME` points at `tools/longshot/home`, so the downloaded
   toolchains land under `tools/longshot` and not beside the saves in
   `~/.local/share/longshot/builder`.
@@ -109,7 +108,7 @@ dg_longshot_nvidia_license_accepted: true   # accepts the NVIDIA RTX SDKs licens
 The builder then runs with `--fetch-ngx-sdk --accept-nvidia-license`, fetches
 NVIDIA's DLSS SDK into `dg_longshot_ngx_sdk_dir`, and puts
 `libnvidia-ngx-dlss.so.*` and `libnvidia-ngx-dlssg.so.*` (frame generation) in
-the game folder's `ngx/`. The build is marked `v3.0.0-rc.4+dlss` in
+the game folder's `ngx/`. The build is marked `v3.0.0+dlss` in
 `.dg-built-ref`, so toggling the flag rebuilds. Under NVIDIA's license, **never
 share or publish a game folder built this way.** On Linux, NGX loads the
 runtime only from a folder whose path is all ASCII.
@@ -215,7 +214,9 @@ reads (the `vkGetSemaphoreCounterValue` wrapper in `vk_work.h`) take it
 shared, and `vkCreateSwapchainKHR` and `vkDestroySwapchainKHR` in
 `vk_main.cpp` take it exclusively. Each side holds it across that one driver
 call only, so it cannot deadlock, and the replay thread waits only while a
-swapchain is being made. Not reported upstream yet.
+swapchain is being made. Not reported upstream yet. v3.0.0 still reads the
+counter with no lock against the swapchain calls, so the patch was rebased onto
+it (same three files and call sites, context only).
 
 If it comes back, the workaround is NVIDIA Reflex Off and fewer swapchain
 rebuilds (Fullscreen, V-Sync, HDR and the Frame generation rows each rebuild
