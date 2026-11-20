@@ -155,7 +155,41 @@ used on a Hisense 4K TV whose EDID reports ~750 nits peak with local dimming:
 
 On the TV: Game picture mode, local dimming high, and the TV's own dynamic
 tone mapping off, since the game already maps to the peak set above. Keep
-V-Sync on or Auto: the output runs at 60 Hz without VRR, and Off tears.
+V-Sync on or Auto: Off tears whenever the frame rate leaves the VRR range.
+
+### VRR (Hyprland)
+
+The game is a native Wayland Vulkan window, so the compositor's VRR applies to
+it with no gamescope. It needs three things outside this repo:
+
+- The display's VRR mode turned on. On a Hisense TV that is the HDMI
+  format of its input set to *Enhanced Pro*. The EDID then carries the HDMI
+  Forum VRR range (48-240 Hz on the Hisense) and the DRM connector reports
+  `vrr_capable` 1 (`modetest -M nvidia-drm -c`).
+- A high-refresh mode on the display's `hl.monitor` rule, such as
+  `mode = "3840x2160@120"`. With `mode = "preferred"` the Hisense comes up at
+  60 Hz. 4K@120 at 10 bit fits the HDMI 2.1 link with room to spare; 4K@144
+  is listed but close to the link's limit.
+- `misc.vrr = 2` (fullscreen only) in `~/.config/hypr/looknfeel.lua`. `1`
+  keeps VRR on at the desktop too, where TVs flicker their brightness at low
+  refresh rates.
+
+The game reads the display's rate at start: the log line `screen 3840x2160 at
+120 Hz` confirms it. While the game is fullscreen, `hyprctl monitors` reads
+`vrr: true`; it drops back to `false` when the window closes.
+
+Settings tested on the RTX 4060 at 4K@120 with HDR10 on:
+
+| Key | Value | Menu |
+|-|-|-|
+| `vsync` | `0` | Auto: FIFO, so no tearing at the top of the range (`2` is Off, `immediate`) |
+| `frame_generation` | `2` | 2x, 60 game frames make 120 on the display |
+| `nvidia_reflex` | `2` | On + boost. Under V-Sync with frame generation it holds the game's frames so the made frames stay under the refresh rate |
+
+These rows are not seeded by the role, since they depend on the display.
+Reflex on is the setting under which the swapchain-rebuild crash below was
+seen; if the game closes while you change a Fullscreen, V-Sync, HDR or Frame
+generation row, set Reflex Off.
 
 ## Gamepad
 
